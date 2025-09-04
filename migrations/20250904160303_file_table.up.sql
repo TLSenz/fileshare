@@ -1,4 +1,4 @@
-
+-- Add up migration script here
 CREATE TABLE file (
                       id INTEGER PRIMARY KEY AUTOINCREMENT, -- SQLite's way of auto-incrementing primary key
                       file_name TEXT NOT NULL,
