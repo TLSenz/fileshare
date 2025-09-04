@@ -1,97 +1,76 @@
-use crate::model::usermodel::ConversionError;
-use diesel::ExpressionMethods;
 use std::fmt::Error;
-use diesel::{QueryDsl, RunQueryDsl, SelectableHelper};
-use tokio::task;
-use crate::model::usermodel::{File, FileToInsert};
-use crate::model::usermodel::ConversionError::*;
-use crate::repository::userrepository::establish_connection;
-use crate::schema::file::dsl::file;
-use crate::schema::file::{file_name, hashed_file_name};
+use sqlx::PgPool;
+use crate::model::usermodel::{ConversionError, File, FileToInsert};
 
-pub async fn write_name_to_db(storing_file: FileToInsert) -> Result<File,Error> {
-    let res = task::spawn_blocking(move || {
-        let connection =  &mut establish_connection();
-        diesel::insert_into(file)
-            .values(storing_file)
-            .returning(File::as_select())
-            .get_result::<File>(connection)
+pub async fn write_name_to_db(pool: PgPool, storing_file: FileToInsert) -> Result<File, Error> {
+    let result = sqlx::query_as!(
+        File,
+        r#"
+        INSERT INTO file (
+            file_name, hashed_file_name, content_hash, content_type, 
+            size, storage_path, owner_id, is_public, is_deleted
+        ) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING *
+        "#,
+        storing_file.file_name,
+        storing_file.hashed_file_name,
+        storing_file.content_hash,
+        storing_file.content_type,
+        storing_file.size,
+        storing_file.storage_path,
+        storing_file.owner_id,
+        storing_file.is_public,
+        storing_file.is_deleted
+    )
+    .fetch_one(&pool)
+    .await;
 
-
-    }).await;
-
-
-    match res {
-        Ok(Ok(other_file)) => {
-            println!("{:?}", other_file);
-            Ok(other_file)
+    match result {
+        Ok(file) => {
+            println!("File inserted: {:?}", file);
+            Ok(file)
         }
-        Ok(Err(_diesel_error)) => {
-            println!("Database Error");
-            Err(Error)
-        }
-        Err(_join_error) => { // Outer Err for a tokio::task::JoinError
-            println!("Error with Thread");
-            Err(Error)
-        }
-    }
-}
-
-pub async fn get_file_name_from_db(other_file_name: String) -> Result<Vec<File>, Error> {
-
-    let res = task::spawn_blocking(move || {
-        let mut  conn = establish_connection();
-
-        let file_from_db = file.filter(hashed_file_name.eq(other_file_name)).limit(1).load::<File>(&mut conn);
-
-        file_from_db
-    }).await;
-
-    match res {
-        Ok(Ok(files)) => {
-            println!("DB Coonection");
-            for filess in files.iter(){
-                println!("CHECKING IF FILE IS LOADING{:?}", filess);
-            }
-            Ok(files)
-        }
-        Ok(Err(_diesel_error)) => {
-            println!("Diesel ORM Error");
-            Err(Error)
-        }
-        Err(_join_error) => {
-            println!("Join Error while Quering DB");
+        Err(err) => {
+            println!("Database Error: {}", err);
             Err(Error)
         }
     }
 }
 
-pub async fn check_if_file_name_exists(name: String) -> Result<bool,ConversionError>{
-    let res = task::spawn_blocking(move || {
-        let mut conn =  establish_connection();
-       
-        let count = file.count().filter(file_name.eq(name)).get_result::<i64>(&mut conn);
-        
-        count
-    }).await;
-    match res {
-        Ok(Ok(count)) => {
-            if count < 1 {
-                Ok(true)
-            }
-            else {
-                Err(ConversionError("Diesel Error".to_string()))
-            }
+pub async fn get_file_name_from_db(pool: PgPool, file_name: String) -> Result<File, Error> {
+    let result = sqlx::query_as!(
+        File,
+        r#"
+        SELECT * FROM file 
+        WHERE hashed_file_name = $1 
+        LIMIT 1
+        "#,
+        file_name
+    )
+    .fetch_one(&pool)
+    .await;
+
+    match result {
+        Ok(file) => Ok(file),
+        Err(err) => {
+            println!("Database Error: {}", err);
+            Err(Error)
         }
-        Ok(Err(_diesel_error)) => {
-            println!("Diesel ORM Error");
-            Err(ConversionError("Diesel Error".to_string()))
-        }
-        Err(_join_error) => {
-            println!("Join Error while Quering DB");
-            Err(ConversionError("Join Error".to_string()))
-        }
-        
     }
 }
 
+pub async fn check_if_file_name_exists(pool: PgPool, name: String) -> Result<bool, ConversionError> {
+    let result = sqlx::query!(
+        r#"
+        SELECT COUNT(*) as count FROM file 
+        WHERE file_name = $1
+        "#,
+        name
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    // If count is 0, the file name doesn't exist
+    Ok(result.count.unwrap_or(0) == 0)
+}
