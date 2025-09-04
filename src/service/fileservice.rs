@@ -5,13 +5,13 @@ use bytes::Bytes;
 use aws_sdk_s3::primitives::ByteStream;
 use axum::extract::Multipart;
 use bcrypt::hash;
+use sqlx::PgPool;
 use crate::model::filemodel::GetFileResponse;
 use crate::model::usermodel::{ConversionError, FileToInsert};
 use crate::model::usermodel::ConversionError::*;
 use crate::repository::filerepository::{check_if_file_name_exists, get_file_name_from_db, write_name_to_db};
 
-
-pub async fn store_files(mut file: Multipart) -> Result<Vec<String>,ConversionError>{
+pub async fn store_files(pool: PgPool, mut file: Multipart) -> Result<Vec<String>, ConversionError> {
     let mut links = Vec::new();
 
     while let Some(field) = file.next_field().await? {
@@ -19,15 +19,13 @@ pub async fn store_files(mut file: Multipart) -> Result<Vec<String>,ConversionEr
 
         let other_file_name = field.name().unwrap().to_string();
         
-        let check = check_if_file_name_exists(other_file_name.clone()).await?;
-        
-      
+        let check = check_if_file_name_exists(pool.clone(), other_file_name.clone()).await?;
         
         let file_type = field.content_type();
 
         match file_type {
             Some(file_type) => {
-                let filetype_splited:Vec<&str> = file_type.split("/").collect();
+                let filetype_splited: Vec<&str> = file_type.split("/").collect();
                 content_type = filetype_splited[1].to_string();
             }
             None => {
@@ -48,15 +46,14 @@ pub async fn store_files(mut file: Multipart) -> Result<Vec<String>,ConversionEr
 
         println!("Length of `{:?}` is {} bytes", other_file_name, data.len());
         let name_link_hash = hash(filename.clone(), 4)?;
-        let data_hash = hash(data.clone(),4)?;
-
+        let data_hash = hash(data.clone(), 4)?;
 
         let file_struct: FileToInsert = FileToInsert {
             file_name: other_file_name.clone(),
             hashed_file_name: name_link_hash.clone(),
             content_hash: data_hash.clone(),
             content_type: content_type.clone(),
-            size: size,
+            size,
             storage_path: filename.clone(),
             owner_id: None,
             is_public: Some(1),
@@ -64,47 +61,33 @@ pub async fn store_files(mut file: Multipart) -> Result<Vec<String>,ConversionEr
         };
 
         aws(&data, &file_struct).await?;
-        write_data(&data, &file_struct).await?;
-
-       
-        let other_link = create_link(file_struct).await?;
+        write_data(&data, &filename).await?;
+        
+        let other_link = create_link(pool.clone(), file_struct).await?;
         links.push(other_link)
     }
     Ok(links)
 }
 
-pub async fn create_link(file:FileToInsert) -> Result<String,ConversionError>{
-
-
+pub async fn create_link(pool: PgPool, file: FileToInsert) -> Result<String, ConversionError> {
     println!("File: {:?}", file);
-    let file = write_name_to_db(file).await;
-
-    let files;
-    match file {
-        Ok(file) => {
-            files = file
-        }
-        Err(_) => {
-            return Err(ConversionError("error".to_string()))
-        }
-    };
-    println!("Filename: {}", &files.hashed_file_name);
-    let other_link = format!("localhost:3000/api/download/{}", urlencoding::encode(files.hashed_file_name.as_str()));
+    let file = write_name_to_db(pool, file).await.map_err(|_| ConversionError("Error writing to database".to_string()))?;
+    
+    println!("Filename: {}", &file.hashed_file_name);
+    let other_link = format!("localhost:3000/api/download/{}", urlencoding::encode(&file.hashed_file_name));
     Ok(other_link)
-
 }
 
-
-pub async fn get_file_name(file_link: String) -> Result<GetFileResponse,Error> { // In Futur add checking for Same Name of File
+pub async fn get_file_name(pool: PgPool, file_link: String) -> Result<GetFileResponse, Error> {
     let file_link: Vec<_> = file_link.split("/").collect();
     let file_name_hash = file_link[file_link.len() - 1];
 
-    let file = get_file_name_from_db(file_name_hash.to_string()).await?;
+    let file = get_file_name_from_db(pool, file_name_hash.to_string()).await?;
 
-    let file_names = &file[0].file_name;
-    let file_paths = &file[0].storage_path;
+    let file_names = &file.file_name;
+    let file_paths = &file.storage_path;
 
-    let res:GetFileResponse = GetFileResponse{
+    let res: GetFileResponse = GetFileResponse {
         filename: file_names.to_string(),
         filepath: file_paths.to_string()
     };
@@ -126,10 +109,8 @@ pub async fn aws(data: &Bytes, data_info: &FileToInsert) -> Result<(), Box<dyn s
     Ok(())
 }
 
-pub async fn write_data(data: &Bytes, data_info: &FileToInsert) -> Result<(), ConversionError>{
-
-    let mut file = File::create(data_info.file_name.clone()).map_err(|e| ConversionError::ConversionError("Error Creating File".to_string()))?;
-    file.write(&*data).map_err(|e| ConversionError::ConversionError("Error writing Data to File".to_string()))?;
- 
+pub async fn write_data(data: &Bytes, filepath: &String) -> Result<(), ConversionError> {
+    let mut file = File::create(filepath).map_err(|_| ConversionError("Error Creating File".to_string()))?;
+    file.write(data).map_err(|_| ConversionError("Error writing Data to File".to_string()))?;
     Ok(())
 }

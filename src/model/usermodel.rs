@@ -8,44 +8,39 @@ use axum::http::StatusCode;
 use axum::Json;
 use axum::response::{IntoResponse, Response};
 use bcrypt::BcryptError;
-use chrono::NaiveDateTime;
-use diesel::{Insertable, Queryable, Selectable};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tokio::task::JoinError;
-use crate::schema::*;
-use crate::schema::users::email;
+use sqlx::FromRow;
 
-#[derive(Queryable, Selectable, Serialize, Deserialize, Debug)]
-#[diesel(table_name = users)]
-pub struct User{
-    // Make sure these match schema.rs::users table types and order
-    pub id: Option<i32>, // Assuming users.id -> Nullable<Integer>
-    pub name: String,    // Assuming users.name -> Text
-    pub password: String,// Assuming users.password -> Text
-    pub email: String,   // Assuming users.email -> Text
-}
-#[derive(Insertable)]
-#[derive(Deserialize, Serialize)]
-#[diesel(table_name = users)]
-#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
-pub struct CreateUserRequest{
+#[derive(Serialize, Deserialize, Debug, FromRow)]
+pub struct User {
+    pub id: Option<i32>,
     pub name: String,
     pub password: String,
     pub email: String,
 }
-#[derive(Serialize,Deserialize,Queryable, Clone)]
-pub struct LoginRequest{
-    pub name:String,
+
+#[derive(Deserialize, Serialize)]
+pub struct CreateUserRequest {
+    pub name: String,
+    pub password: String,
+    pub email: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct LoginRequest {
+    pub name: String,
     pub password: String,
     pub email: String
 }
 
-pub struct LoginResponse{
+pub struct LoginResponse {
     pub status_code: StatusCode,
     pub jwt_token: String
 }
 
-impl IntoResponse for LoginResponse{
+impl IntoResponse for LoginResponse {
     fn into_response(self) -> Response {
         let res_json = serde_json::json!({
             "token" : self.jwt_token,
@@ -54,28 +49,24 @@ impl IntoResponse for LoginResponse{
     }
 }
 
-#[derive(Queryable, Selectable, Debug, PartialEq)]
-#[diesel(table_name = crate::schema::file)] // Path seems correct
-#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+#[derive(Debug, PartialEq, Serialize, Deserialize, FromRow)]
 pub struct File {
-    pub id: Option<i32>, // `id -> Nullable<Integer>`
+    pub id: Option<i32>,
     pub file_name: String,
     pub hashed_file_name: String,
     pub content_hash: String,
     pub content_type: String,
-    pub size: i32, // `size -> Integer`
+    pub size: i32,
     pub storage_path: String,
-    pub owner_id: Option<i32>, // `owner_id -> Nullable<Integer>`
-    pub is_public: Option<i32>, // `is_public -> Nullable<Integer>`
-    pub is_deleted: Option<i32>, // `is_deleted -> Nullable<Integer>`
-    pub created_at: Option<NaiveDateTime>, // <--- THIS IS THE FIX
-    pub updated_at: Option<NaiveDateTime>, // <--- THIS IS THE FIX
-    pub deleted_at: Option<NaiveDateTime>, // <--- THIS IS THE FIX
+    pub owner_id: Option<i32>,
+    pub is_public: Option<i32>,
+    pub is_deleted: Option<i32>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+    pub deleted_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Insertable, Deserialize, Serialize, Debug)]
-#[diesel(table_name = file)]
-#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct FileToInsert {
     pub file_name: String,
     pub hashed_file_name: String,
@@ -86,8 +77,7 @@ pub struct FileToInsert {
     pub owner_id: Option<i32>,
     pub is_public: Option<i32>,
     pub is_deleted: Option<i32>,
-    // Timestamps are omitted here because your SQL schema has DEFAULT CURRENT_TIMESTAMP for them,
-    // so Diesel will not try to insert them, relying on the DB to set them.
+    // Timestamps are omitted here because the SQL schema has DEFAULT CURRENT_TIMESTAMP for them
 }
 
 #[derive(Debug)]
@@ -103,44 +93,54 @@ impl fmt::Display for ConversionError {
     }
 }
 
-impl std::error::Error for ConversionError{
-
+impl std::error::Error for ConversionError {
 }
-impl From<TryFromIntError> for ConversionError{
+
+impl From<TryFromIntError> for ConversionError {
     fn from(value: TryFromIntError) -> Self {
         ConversionError::ConversionError(format!("Could nor convert: {} ", value))
     }
 }
 
-impl From<BcryptError> for ConversionError{
+impl From<BcryptError> for ConversionError {
     fn from(value: BcryptError) -> Self {
         ConversionError::ConversionError(format!("Error Message:{}", value))
     }
 }
-impl IntoResponse for ConversionError{
+
+impl IntoResponse for ConversionError {
     fn into_response(self) -> Response {
         (StatusCode::INTERNAL_SERVER_ERROR, format!("Erro with Storing File and Provide Link: {}", self)).into_response()
     }
 }
+
 impl From<MultipartError> for ConversionError {
     fn from(err: MultipartError) -> Self {
         ConversionError::ConversionError("Erorr".to_string())
     }
 }
-impl From<VarError> for ConversionError{
+
+impl From<VarError> for ConversionError {
     fn from(value: VarError) -> Self {
         ConversionError::ConversionError("Error Converting stuff".to_string())
     }
 }
-impl From<JoinError> for ConversionError{
+
+impl From<JoinError> for ConversionError {
     fn from(value: JoinError) -> Self {
         println!("{}", value);
         ConversionError::ConversionError("Error Join Handle".to_string())
     }
 }
 
-impl From<Box<dyn std::error::Error>> for ConversionError{
+impl From<Box<dyn std::error::Error>> for ConversionError {
     fn from(value: Box<dyn std::error::Error>) -> Self {
         ConversionError::ConversionError("Error".to_string())
+    }
+}
+
+impl From<sqlx::Error> for ConversionError {
+    fn from(value: sqlx::Error) -> Self {
+        ConversionError::ConversionError(format!("Database Error: {}", value))
     }
 }
