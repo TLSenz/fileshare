@@ -1,11 +1,12 @@
-use axum::extract::{Multipart, Path, State};
+use std::fmt::Error;
+use axum::extract::{Path, State};
 use axum::body::*;
 use axum::response::IntoResponse;
 use axum::http::{header, Response, StatusCode};
 use sqlx::PgPool;
-use crate::model::usermodel::ConversionError;
+use crate::model::filemodel::GetFileResponse;
 use crate::model::usermodel::ConversionError::*;
-use crate::service::fileservice::{get_file_name, store_files};
+use crate::repository::filerepository::get_file_name_from_db;
 
 pub async fn download(
     State(pool): State<PgPool>,
@@ -41,23 +42,19 @@ pub async fn download(
     }
 }
 
-pub async fn upload_file(
-    State(pool): State<PgPool>,
-    file: Multipart
-) -> Result<String, ConversionError> {
-    let is_stored = store_files(pool, file).await;
-    match is_stored {
-        Ok(links) => {
-            if let Some(first_link) = links.into_iter().next() {
-                Ok(first_link)
-            } else {
-                println!("No links returned from store_files");
-                Err(ConversionError("No files were stored".to_string()))
-            }
-        }
-        Err(error) => {
-            println!("Error storing files: {}", error);
-            Err(error)
-        }
-    }
+pub async fn get_file_name(pool: PgPool, file_link: String) -> Result<GetFileResponse, Error> {
+    let file_link: Vec<_> = file_link.split("/").collect();
+    let file_name_hash = file_link[file_link.len() - 1];
+
+    let file = get_file_name_from_db(pool, file_name_hash.to_string()).await?;
+
+    let file_names = &file.file_name;
+    let file_paths = &file.storage_path;
+
+    let res: GetFileResponse = GetFileResponse {
+        filename: file_names.to_string(),
+        filepath: file_paths.to_string()
+    };
+
+    Ok(res)
 }

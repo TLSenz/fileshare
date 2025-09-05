@@ -3,7 +3,7 @@ use sqlx::PgPool;
 use crate::model::securitymodel::EncodeJWT;
 use crate::model::usermodel::{ConversionError, CreateUserRequest, LoginRequest, User};
 
-pub async fn create_user(pool: PgPool, new_user: CreateUserRequest) -> Result<bool, Error> {
+pub async fn create_user(pool: PgPool, new_user: CreateUserRequest) -> Result<(), Error> {
     let result = sqlx::query_as!(
         User,
         r#"
@@ -17,15 +17,15 @@ pub async fn create_user(pool: PgPool, new_user: CreateUserRequest) -> Result<bo
     )
     .fetch_one(&pool)
     .await;
-    
+
     match result {
         Ok(user) => {
             println!("User created: {:?}", user);
-            Ok(true)
+            Ok(())
         }
         Err(err) => {
             println!("Database Error: {}", err);
-            Ok(false)
+            Err(Error)
         }
     }
 }
@@ -35,14 +35,15 @@ pub async fn check_if_user_exist(pool: PgPool, user: EncodeJWT) -> Result<bool, 
         r#"
         SELECT COUNT(*) as count
         FROM users
-        WHERE email = $1
+        WHERE email = $1 AND name = $2
         LIMIT 1
         "#,
-        user.email
+        user.email,
+        user.username
     )
     .fetch_one(&pool)
     .await?;
-    
+
     let count = result.count.unwrap_or(0);
     if count > 0 {
         Ok(true)
@@ -56,15 +57,16 @@ pub async fn check_if_user_exist_login(pool: PgPool, user: LoginRequest) -> Resu
         r#"
         SELECT COUNT(*) as count
         FROM users
-        WHERE name = $1 AND password = $2
+        WHERE name = $1 AND password = $2 AND email = $3
         LIMIT 1
         "#,
         user.name,
-        user.password
+        user.password,
+        user.email
     )
     .fetch_one(&pool)
     .await?;
-    
+
     let count = result.count.unwrap_or(0);
     if count > 0 {
         Ok(true)
