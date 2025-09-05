@@ -9,6 +9,7 @@ use crate::routes::signup::signup;
 use crate::Security::jwt::authenticate;
 use crate::db::create_pool;
 use sqlx::PgPool;
+use crate::routes::healthc_check::health_check;
 
 #[tokio::main]
 async fn main() {
@@ -17,7 +18,7 @@ async fn main() {
 
     // Create app with database connection pool as state
     let app = Router::new()
-        .route("/", get(hello_world))
+        .route("/", get(health_check))
         .route("/api/login", post(login))
         .route("/api/signup", post(signup))
         .route("/api/upload", post(upload_file).layer(middleware::from_fn_with_state(pool.clone(), authenticate)))
@@ -40,6 +41,7 @@ pub mod routes{
     pub mod upload;
     pub mod login;
     pub mod signup;
+    pub mod healthc_check;
 }
 pub mod model{
     pub mod usermodel;
