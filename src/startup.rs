@@ -1,5 +1,5 @@
 use crate::security::authenticate;
-use axum::{middleware, Error, Router};
+use axum::{middleware, Router};
 use axum::routing::{get, post};
 use axum::serve;
 use axum::serve::Serve;
@@ -12,7 +12,7 @@ use crate::routes::signup::signup;
 use crate::routes::upload::upload_file;
 
 pub async fn startup() -> Result<Serve<TcpListener, Router,Router>, std::io::Error> {
-    // Create database connection pool
+
     let pool = create_pool().await.expect("Failed to create database pool");
 
     // Create app with database connection pool as state

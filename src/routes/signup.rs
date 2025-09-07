@@ -10,7 +10,7 @@ pub async fn signup(
     State(pool): State<PgPool>,
     Json(user): Json<SignupRequest>
 ) -> Result<impl IntoResponse,StatusCode> {
-    let result = create_user(pool, user).await.map_err(|e| 
+    create_user(pool, user).await.map_err(|e| 
     StatusCode::INTERNAL_SERVER_ERROR
     )?;
     Ok(StatusCode::OK)

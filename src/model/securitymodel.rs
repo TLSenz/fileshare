@@ -1,5 +1,5 @@
 use std::fmt;
-use std::fmt::{write, Formatter};
+use std::fmt::Formatter;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};

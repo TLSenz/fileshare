@@ -1,7 +1,6 @@
 use std::env::VarError;
 use std::fmt;
 use std::fmt::Formatter;
-use std::io::Error;
 use std::num::TryFromIntError;
 use axum::extract::multipart::MultipartError;
 use axum::http::StatusCode;
@@ -29,7 +28,7 @@ pub struct SignupRequest {
 }
 
 impl SignupRequest{
-    fn new (name: String, password: String, email: String) -> Self{
+    pub fn new (name: String, password: String, email: String) -> Self{
         SignupRequest{
             name,
             password,
