@@ -22,10 +22,20 @@ pub struct User {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct CreateUserRequest {
+pub struct SignupRequest {
     pub name: String,
     pub password: String,
     pub email: String,
+}
+
+impl SignupRequest{
+    fn new (name: String, password: String, email: String) -> Self{
+        SignupRequest{
+            name,
+            password,
+            email
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]

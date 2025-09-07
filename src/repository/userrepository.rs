@@ -1,9 +1,9 @@
-use std::fmt::Error;
-use sqlx::PgPool;
-use crate::model::securitymodel::EncodeJWT;
-use crate::model::usermodel::{ConversionError, CreateUserRequest, LoginRequest, User};
+use std::error::Error;
 
-pub async fn create_user(pool: PgPool, new_user: CreateUserRequest) -> Result<(), Error> {
+use sqlx::PgPool;
+use crate::model::{ConversionError, EncodeJWT, LoginRequest, SignupRequest, User};
+
+pub async fn create_user(pool: PgPool, new_user: SignupRequest) -> Result<(), Box<dyn Error>> {
     let result = sqlx::query_as!(
         User,
         r#"
@@ -24,8 +24,8 @@ pub async fn create_user(pool: PgPool, new_user: CreateUserRequest) -> Result<()
             Ok(())
         }
         Err(err) => {
-            println!("Database Error: {}", err);
-            Err(Error)
+            println!("Error creating user: {:?}", err);
+            Err(Box::new(err))
         }
     }
 }
