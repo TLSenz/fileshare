@@ -1,6 +1,6 @@
 use std::fmt::Error;
 use sqlx::PgPool;
-use crate::model::usermodel::{ConversionError, File, FileToInsert};
+use crate::model::{ConversionError, File, FileToInsert};
 
 pub async fn write_name_to_db(pool: PgPool, storing_file: FileToInsert) -> Result<File, Error> {
     let result = sqlx::query_as!(

@@ -3,6 +3,13 @@ name = "fileshare"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+path = "src/main.rs"
+name = "fileshare"
+
 [dependencies]
 axum = { version = "0.8.4", features = ["multipart"] }
 serde = { version = "1.0.219",features = ["derive"] }
@@ -20,4 +27,7 @@ aws-config = "1.8.0"
 aws-sdk-s3control = "1.84.0"
 aws-sdk-s3 = "1.94.0"
 bytes = "1.10.1"
-sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio", "chrono"] }
+sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio", "chrono", "uuid", "migrate"] }
+
+[dev-dependencies]
+reqwest = {version = "0.12.23", features = ["json"]}
