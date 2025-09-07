@@ -1,14 +1,14 @@
 
 use std::env;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use axum::{http, Error};
+use axum::http;
 use axum::body::Body;
-use axum::http::{HeaderValue, Response, StatusCode};
+use axum::http::{Response, StatusCode};
 use axum::extract::{Request, State};
 use axum::middleware::Next;
 use dotenv::dotenv;
-use jsonwebtoken::{encode, Algorithm, EncodingKey, Header, Validation, decode, DecodingKey, TokenData, errors::Error as JwtError};
+use jsonwebtoken::{encode, Algorithm, EncodingKey, Header, Validation, decode, DecodingKey, TokenData};
 use sqlx::PgPool;
 use crate::model::securitymodel::{AuthError, EncodeJWT};
 use crate::model::securitymodel::AuthError::*;
@@ -60,7 +60,7 @@ pub fn decode_jwt(jwt_token: String) -> Result<TokenData<EncodeJWT>, ConversionE
 
 pub async fn authenticate(
     State(pool): State<PgPool>,
-    mut req: Request,
+    req: Request,
     next: Next
 ) -> Result<Response<Body>, AuthError> {
     // Get authorization header

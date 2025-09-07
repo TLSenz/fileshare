@@ -5,7 +5,6 @@ use axum::response::IntoResponse;
 use axum::http::{header, Response, StatusCode};
 use sqlx::PgPool;
 use crate::model::filemodel::GetFileResponse;
-use crate::model::usermodel::ConversionError::*;
 use crate::repository::filerepository::get_file_name_from_db;
 
 pub async fn download(

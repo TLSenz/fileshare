@@ -1,7 +1,6 @@
 use std::env::VarError;
 use std::fmt;
 use std::fmt::Formatter;
-use std::io::Error;
 use std::num::TryFromIntError;
 use axum::extract::multipart::MultipartError;
 use axum::http::StatusCode;
@@ -22,10 +21,20 @@ pub struct User {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct CreateUserRequest {
+pub struct SignupRequest {
     pub name: String,
     pub password: String,
     pub email: String,
+}
+
+impl SignupRequest{
+    pub fn new (name: String, password: String, email: String) -> Self{
+        SignupRequest{
+            name,
+            password,
+            email
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]

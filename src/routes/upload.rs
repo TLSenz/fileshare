@@ -36,7 +36,7 @@ pub async fn upload_file(
 
         println!("went to after contenttype");
 
-        let filename = "content/".to_owned() + other_file_name.as_str() + &"." + &content_type;
+        let filename = "content/".to_owned() + other_file_name.as_str() + "." + &content_type;
         let data = field.bytes().await.map_err(ConversionError::from)?;
 
         println!("Went after Data");

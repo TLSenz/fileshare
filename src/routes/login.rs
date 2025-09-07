@@ -2,11 +2,9 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
 use sqlx::PgPool;
-use crate::model::securitymodel::AuthError;
-use crate::model::usermodel::{LoginRequest, LoginResponse};
-use crate::repository::userrepository::check_if_user_exist_login;
-use crate::Security::jwt::encode_jwt;
-use crate::service::userservice::check_user_login;
+use crate::model::{AuthError, LoginRequest, LoginResponse};
+use crate::repository::check_if_user_exist_login;
+use crate::security::encode_jwt;
 
 pub async fn login(
     State(pool): State<PgPool>,
