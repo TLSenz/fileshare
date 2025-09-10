@@ -1,4 +1,5 @@
 use reqwest::header::CONTENT_TYPE;
+use fileshare::db::create_pool;
 use fileshare::model::SignupRequest;
 
 #[tokio::test]
@@ -12,6 +13,7 @@ async  fn test_health_check() {
 
 #[tokio::test]
 async fn test_sign_up() {
+    let db_pool = create_pool().await.expect("Failed to get DB conn");
     let client = reqwest::Client::new();
     
     let test_user = SignupRequest::new("Sven".to_string(), "2009Formel1".to_string(), "sven@zemp.email".to_string());
@@ -23,5 +25,10 @@ async fn test_sign_up() {
         .await
         .expect("Could not Connect to Backend. PLease ensure a Instance is running");
     println!("{:?}", request);
-    assert!(request.status().is_success())
+
+    assert!(request.status().is_success());
+
+
+
+    sqlx::query("Delete from users where name = 'Sven'").fetch_all(&db_pool).await.unwrap();
 }

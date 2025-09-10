@@ -7,6 +7,7 @@ use tokio::net::TcpListener;
 use tower_http::services::ServeDir;
 use crate::db::create_pool;
 use crate::routes::download::download;
+use crate::routes::health_check;
 use crate::routes::login::login;
 use crate::routes::signup::signup;
 use crate::routes::upload::upload_file;
@@ -17,6 +18,7 @@ pub async fn startup() -> Result<Serve<TcpListener, Router,Router>, std::io::Err
 
     // Create app with database connection pool as state
     let app = Router::new()
+        .route("/", get(health_check))
         .route("/api/login", post(login))
         .route("/api/signup", post(signup))
         .route("/api/upload", post(upload_file).layer(middleware::from_fn_with_state(pool.clone(), authenticate)))
