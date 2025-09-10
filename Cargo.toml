@@ -30,4 +30,4 @@ bytes = "1.10.1"
 sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio", "chrono", "uuid", "migrate"] }
 
 [dev-dependencies]
-reqwest = {version = "0.12.23", features = ["json"]}
+reqwest = {version = "0.12.23", features = ["json","multipart"]}

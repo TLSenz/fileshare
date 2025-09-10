@@ -14,8 +14,7 @@ pub async fn login(
         let token = encode_jwt(&user.name, user.email.as_str())?;
 
         let response = LoginResponse {
-            status_code: StatusCode::OK,
-            jwt_token: token
+            token: token
         };
 
         Ok(response)

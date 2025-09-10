@@ -61,7 +61,7 @@ pub async fn upload_file(
             is_deleted: Some(0),
         };
 
-        aws(&data, &file_struct).await?;
+       // aws(&data, &file_struct).await?;
         write_data(&data, &filename).await?;
 
         let other_link = create_link(pool.clone(), file_struct).await?;
@@ -75,7 +75,7 @@ pub async fn create_link(pool: PgPool, file: FileToInsert) -> Result<String, Con
     let file = write_name_to_db(pool, file).await.map_err(|_| ConversionError("Error writing to database".to_string()))?;
 
     println!("Filename: {}", &file.hashed_file_name);
-    let other_link = format!("localhost:3000/api/download/{}", urlencoding::encode(&file.hashed_file_name));
+    let other_link = format!("http://127.0.0.1:3000/api/download/{}", urlencoding::encode(&file.hashed_file_name));
     Ok(other_link)
 }
 pub async fn aws(data: &Bytes, data_info: &FileToInsert) -> Result<(), Box<dyn std::error::Error>> {
@@ -93,6 +93,7 @@ pub async fn aws(data: &Bytes, data_info: &FileToInsert) -> Result<(), Box<dyn s
 }
 
 pub async fn write_data(data: &Bytes, filepath: &String) -> Result<(), ConversionError> {
+    println!("Writing Data to File, Path: {}", filepath);
     let mut file = File::create(filepath).map_err(|_| ConversionError("Error Creating File".to_string()))?;
     file.write(data).map_err(|_| ConversionError("Error writing Data to File".to_string()))?;
     Ok(())

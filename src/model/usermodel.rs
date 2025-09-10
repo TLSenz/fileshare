@@ -44,15 +44,25 @@ pub struct LoginRequest {
     pub email: String
 }
 
+impl LoginRequest{
+    pub fn new (name: String, password: String, email: String) -> Self{
+        LoginRequest{
+            name,
+            password,
+            email
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct LoginResponse {
-    pub status_code: StatusCode,
-    pub jwt_token: String
+    pub token: String
 }
 
 impl IntoResponse for LoginResponse {
     fn into_response(self) -> Response {
         let res_json = serde_json::json!({
-            "token" : self.jwt_token,
+            "token" : self.token,
         });
         (StatusCode::OK, Json(res_json)).into_response()
     }
