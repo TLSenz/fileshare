@@ -6,26 +6,24 @@
   };
 
   outputs = { self, nixpkgs }:
-
-
   let
     system = "x86_64-linux";
-    pkgs = import nixpkgs { inherit system;};
+    pkgs = import nixpkgs { inherit system; };
+  in {
+    devShells.${system}.default = pkgs.mkShell {
+      buildInputs = [
+        pkgs.rustc
+        pkgs.cargo
+        pkgs.openssl
+        pkgs.pkg-config
+        pkgs.docker-compose
+        pkgs.sqlx-cli
+      ];
 
-    in {
-      devShells.${system}.default = pkgs.mkShell {
-            buildInputs = [
-            pkgs.rustc
-            pkgs.cargo
-            pkgs.openssl
-            pkgs.pkg-config
-            pkgs.docker-compose
-            pkgs.sqlx-cli
-            ];
-PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
-          };
-
-      };
-
-  }
-
+      # Correct way to set environment variables
+      shellHook = ''
+        export PKG_CONFIG_PATH=${pkgs.openssl.dev}/lib/pkgconfig
+      '';
+    };
+  };
+}

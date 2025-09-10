@@ -2,7 +2,6 @@ pub mod download;
 pub mod login;
 pub mod signup;
 pub(crate) mod upload;
-mod healthc_check;
 
 pub mod healthc_check;
 
