@@ -16,8 +16,8 @@
         pkgs.cargo
         pkgs.openssl
         pkgs.pkg-config
-        pkgs.docker-compose
         pkgs.sqlx-cli
+        pkgs.tokei
       ];
 
       # Correct way to set environment variables
