@@ -1,0 +1,54 @@
+# Codebase Chores and Optimizations (What to improve)
+
+- Replace all unwrap()/expect() in async paths with structured error handling and propagate meaningful errors.
+- Standardize error types across layers (routes, service, repository) to avoid ad-hoc enums and stringly-typed errors.
+- Remove dead code, unused imports, and feature-gated blocks that are never enabled.
+- Reduce unnecessary cloning; prefer borrowing (&str, &T) where possible to minimize allocations.
+- Consolidate duplicated logic across routes (login/upload/download) into shared helpers/middleware.
+- Ensure all blocking I/O (file ops, crypto, compression) is offloaded from the async runtime.
+- Stream file uploads/downloads to avoid loading entire files into memory.
+- Sanitize and normalize file paths and names consistently at a single boundary layer.
+- Add input validation for request payloads and query params (lengths, formats, limits).
+- Apply consistent logging levels and structured logs; remove noisy debug logs from hot paths.
+- Apply timeouts and limits for HTTP clients/servers, including body size and header limits.
+- Centralize configuration (env vars/Config struct) and remove hard-coded ports/paths.
+- Reuse HTTP clients (reqwest/awc) instead of creating a new client per request.
+- Pool and reuse database connections; remove ad-hoc connections opened per call.
+- Ensure transactions encapsulate multi-step repository operations where consistency is required.
+- Add retries with backoff only where operations are idempotent; remove blanket retries elsewhere.
+- Replace manual JSON building/parsing with serde models consistently.
+- Derive only necessary serde traits; remove broad derives to shrink binary and compile time.
+- Use smaller integer/enum types where appropriate to reduce struct sizes.
+- Replace manual loops with iterator adapters where it simplifies and clarifies intent.
+- Isolate auth/token creation/validation into a dedicated module; remove cross-layer leakage.
+- Ensure secrets (tokens, keys) never appear in logs; scrub sensitive fields on serialization.
+- Add rate limiting and request-id propagation at middleware level (uniformly across routes).
+- Ensure consistent HTTP status codes and error bodies for common failure cases.
+- Introduce pagination/limits on list endpoints to avoid unbounded responses.
+- Normalize time handling to UTC and a single chrono/time type across the codebase.
+- Move magic constants into named constants; centralize them per domain.
+- Replace stringly-typed identifiers with newtype wrappers for compile-time safety.
+- Guard filesystem operations against path traversal and symlink attacks.
+- Prefer Result-returning constructors (new/try_new) for model invariants; remove partial states.
+- Add unit tests for edge cases in upload/download (zero-length, large files, special chars).
+- Add integration tests that run against ephemeral storage and avoid external network deps.
+- Enable and fix lint warnings from clippy (including pedantic where reasonable); enforce rustfmt.
+- Split oversized modules into smaller ones; keep public API minimal and private by default.
+- Minimize public surface of crates/modules; re-export only intended types.
+- Replace custom hashing/crypto with well-reviewed crates; remove bespoke implementations.
+- Avoid panics in library code paths; convert to errors and bubble up.
+- Use anyhow/thiserror consistently for error contexts and typed errors at boundaries.
+- Remove println!/dbg! in favor of tracing/log macros; ensure spans for async tasks.
+- Ensure cancellation-safety for async code; avoid holding locks across .await points.
+- Review Mutex/RwLock usage; prefer lock-free or granular locking; avoid blocking in critical sections.
+- Replace synchronous std::fs calls with tokio::fs in async contexts.
+- Add backpressure on uploads/downloads; tune buffer sizes and concurrency limits.
+- Validate and cap user-controlled concurrency parameters.
+- Make repository interfaces trait-based for easier testing; remove tight coupling to implementations.
+- Eliminate circular dependencies between modules; clarify layering boundaries.
+- Remove large files and artifacts from the repo; use .gitignore effectively.
+- Optimize Docker image (multi-stage, slim base); reduce build context size.
+- Cache dependencies in CI; enable incremental builds; remove unnecessary build scripts.
+- Add feature flags to gate optional integrations; compile only what’s needed in production.
+- Review and minimize unsafe blocks (if any); add comments and invariants where they must remain.
+- Add benchmarking for hot paths and guard against performance regressions.
