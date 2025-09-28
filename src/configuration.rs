@@ -4,21 +4,21 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize,Serialize)]
 pub struct Settings{
-    application_settings: ApplicationSettings,
-    database_settings: DatabaseSettings
+    pub application: ApplicationSettings,
+    pub database: DatabaseSettings
 }
 #[derive(Deserialize,Serialize)]
 pub struct DatabaseSettings{
-    host: String,
-    username: String,
-    password: String,
-    name: String,
-    port: u16
+    pub host: String,
+    pub username: String,
+    pub password: String,
+    pub name: String,
+    pub port: u16
 }
 #[derive(Deserialize,Serialize)]
 pub struct ApplicationSettings{
-    host: u16,
-    port: u16
+    pub host: String,
+    pub port: u16
 }
 
 
@@ -34,11 +34,15 @@ pub fn get_config() ->Result<Settings, ConfigError>{
 
 impl Settings {
 
-    pub fn connection_string(&self) -> String {
+    pub fn connection_string_database(&self) -> String {
         format!(
             "postgres://{}:{}@{}:{}/{}",
-            self.database_settings.name, self.database_settings.password, self.database_settings.host, self.database_settings.port, self.database_settings.name
+            self.database.username, self.database.password, self.database.host, self.database.port, self.database.name
         )
+    }
+
+    pub  fn connection_string_application(&self) -> String{
+        format!("{}:{}",self.application.host,self.application.port)
     }
 
 }

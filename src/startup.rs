@@ -21,7 +21,7 @@ pub async fn startup(listener: TcpListener, pg_pool: PgPool) -> Result<Serve<Tcp
         .route("/api/login", post(login))
         .route("/api/signup", post(signup))
         .route("/api/upload", post(upload_file).layer(middleware::from_fn_with_state(pg_pool.clone(), authenticate)))
-        .route("/api/download/{file_link}", get(download))
+        .route("/api/download/{*file_link}", get(download))
         .nest_service("/files", ServeDir::new("content"))
         .with_state(pg_pool);
 
