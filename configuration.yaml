@@ -1,6 +1,8 @@
 application:
   host: "127.0.0.1"
   port: 3000
+  log_level: "Info"
+  log_format: "Pretty"
 database:
   username: "postgres"
   host: "127.0.0.1"

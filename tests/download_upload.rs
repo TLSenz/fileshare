@@ -26,7 +26,7 @@ async fn login() -> String {
 }
 #[tokio::test]
 async fn test_upload() {
-    let db_pool = create_pool().await.expect("no connection to db");
+    let db_pool = create_pool("postgres://postgres:example@localhost/fileshare").await.expect("no connection to db");
     let token = login().await;
     let client = reqwest::Client::new();
 
