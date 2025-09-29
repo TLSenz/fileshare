@@ -4,6 +4,7 @@ use axum::body::*;
 use axum::response::IntoResponse;
 use axum::http::{header, Response, StatusCode};
 use sqlx::PgPool;
+use uuid::Uuid;
 use crate::model::filemodel::GetFileResponse;
 use crate::repository::filerepository::get_file_name_from_db;
 
@@ -11,7 +12,13 @@ pub async fn download(
     State(pool): State<PgPool>,
     Path(file_link): Path<String>
 ) -> impl IntoResponse {
-    println!("Processing Request");
+
+    let request_id = Uuid::new_v4();
+    tracing::info_span!(
+        "Dowloading File",
+        %request_id,
+        file_link = %file_link
+    );
 
     let information = get_file_name(pool, &file_link).await;
 
@@ -27,14 +34,22 @@ pub async fn download(
                         .header(header::CONTENT_TYPE, content_types.first_raw().unwrap())
                         .body(body)
                         .unwrap()
+
                 }
                 Err(_) => {
-                    println!("Error Reading Data");
+                    tracing::error_span!(
+                        "Error finding/Sending File",
+                        %request_id
+                    );
                     (StatusCode::INTERNAL_SERVER_ERROR, "File not found").into_response()
                 }
             }
         }
         Err(error) => {
+            tracing::error_span!(
+                "Error getting URl Path for File link",
+                %request_id
+            );
             println!("Error message while try to get File Path: {}", error);
             (StatusCode::INTERNAL_SERVER_ERROR).into_response()
         }

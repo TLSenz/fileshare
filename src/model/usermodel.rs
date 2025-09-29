@@ -96,7 +96,6 @@ pub struct FileToInsert {
     pub owner_id: Option<i32>,
     pub is_public: Option<i32>,
     pub is_deleted: Option<i32>,
-    // Timestamps are omitted here because the SQL schema has DEFAULT CURRENT_TIMESTAMP for them
 }
 
 #[derive(Debug)]

@@ -3,16 +3,44 @@ use axum::http::StatusCode;
 use axum::Json;
 use axum::response::IntoResponse;
 use sqlx::PgPool;
+use uuid::Uuid;
 use crate::model::usermodel::SignupRequest;
-use crate::repository::userrepository::create_user;
 
 pub async fn signup(
     State(pool): State<PgPool>,
     Json(user): Json<SignupRequest>
-) -> Result<impl IntoResponse,StatusCode> {
-    create_user(pool, user).await.map_err(|e| 
-    StatusCode::INTERNAL_SERVER_ERROR
-    )?;
+) -> Result<impl IntoResponse, StatusCode> {
+
+    let request_id = Uuid::new_v4();
+    tracing::info_span!(
+        "User is Logging in.",
+        %request_id,
+        user_email = %user.email,
+        user_name = %user.name
+    );
+
+    sqlx::query!(
+        r#"
+        INSERT INTO users (name, email, password)
+        VALUES ($1, $2, $3)
+        "#,
+        user.name,
+        user.email,
+        user.password
+    )
+    .execute(&pool)
+    .await
+    .map_err(|_| {
+        tracing::error_span!(
+            "Error Signing Up User",
+            %request_id
+        );
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    tracing::info_span!(
+        "Successfully signed in User",
+        %request_id
+    );
     Ok(StatusCode::OK)
-    
 }
