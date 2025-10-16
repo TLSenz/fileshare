@@ -14,10 +14,10 @@ pub async fn download(
 ) -> impl IntoResponse {
 
     let request_id = Uuid::new_v4();
-    tracing::info_span!(
-        "Dowloading File",
+    tracing::info!(
         %request_id,
-        file_link = %file_link
+        file_link = %file_link,
+        "Downloading file"
     );
 
     let information = get_file_name(pool, &file_link).await;
@@ -37,20 +37,20 @@ pub async fn download(
 
                 }
                 Err(_) => {
-                    tracing::error_span!(
-                        "Error finding/Sending File",
-                        %request_id
+                    tracing::error!(
+                        %request_id,
+                        "Error finding/sending file"
                     );
                     (StatusCode::INTERNAL_SERVER_ERROR, "File not found").into_response()
                 }
             }
         }
         Err(error) => {
-            tracing::error_span!(
-                "Error getting URl Path for File link",
-                %request_id
+            tracing::error!(
+                %request_id,
+                error = %error,
+                "Error getting URL path for file link"
             );
-            println!("Error message while try to get File Path: {}", error);
             (StatusCode::INTERNAL_SERVER_ERROR).into_response()
         }
     }

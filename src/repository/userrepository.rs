@@ -1,7 +1,6 @@
-use std::error::Error;
 
 use sqlx::PgPool;
-use crate::model::{ConversionError, EncodeJWT, LoginRequest, SignupRequest, User};
+use crate::model::{ConversionError, EncodeJWT, LoginRequest};
 
 
 

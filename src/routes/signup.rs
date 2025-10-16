@@ -12,11 +12,11 @@ pub async fn signup(
 ) -> Result<impl IntoResponse, StatusCode> {
 
     let request_id = Uuid::new_v4();
-    tracing::info_span!(
-        "User is Logging in.",
+    tracing::info!(
         %request_id,
         user_email = %user.email,
-        user_name = %user.name
+        user_name = %user.name,
+        "User is signing up"
     );
 
     sqlx::query!(
@@ -31,16 +31,16 @@ pub async fn signup(
     .execute(&pool)
     .await
     .map_err(|_| {
-        tracing::error_span!(
-            "Error Signing Up User",
-            %request_id
+        tracing::error!(
+            %request_id,
+            "Error signing up user"
         );
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    tracing::info_span!(
-        "Successfully signed in User",
-        %request_id
+    tracing::info!(
+        %request_id,
+        "Successfully signed up user"
     );
     Ok(StatusCode::OK)
 }

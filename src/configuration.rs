@@ -1,9 +1,6 @@
-use tracing_subscriber::fmt::format;
-use tracing_subscriber::fmt::FormatEvent;
-use std::io::Error;
-use config::{Config, ConfigError};
+use config::ConfigError;
 use serde::{Deserialize, Serialize};
-use tracing_subscriber::{fmt, EnvFilter, Registry};
+use tracing_subscriber::EnvFilter;
 
 #[derive(Deserialize,Serialize)]
 pub struct Settings{

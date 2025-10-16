@@ -1,12 +1,9 @@
-use tracing_subscriber::Registry;
-use crate::fmt::FormatEvent;
 use fileshare::configuration::{build_subscriber,};
-use std::fmt::format;
 use tokio::net::TcpListener;
 use fileshare::configuration::get_config;
 use fileshare::db::create_pool;
 use fileshare::startup::startup;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() -> Result<(),std::io::Error> {

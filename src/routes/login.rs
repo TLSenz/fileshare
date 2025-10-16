@@ -4,7 +4,6 @@ use axum::response::IntoResponse;
 use axum::Json;
 use sqlx::PgPool;
 use uuid::Uuid;
-use crate::configuration::build_subscriber;
 use crate::model::{LoginRequest, LoginResponse};
 use crate::security::encode_jwt;
 
@@ -14,11 +13,11 @@ pub async fn login(
 ) -> impl IntoResponse {
     
     let request_id = Uuid::new_v4();
-    tracing::info_span!(
-        "User is Logging in.",
+    tracing::info!(
         %request_id,
         user_email = %user.email,
-        user_name = %user.name
+        user_name = %user.name,
+        "User is Logging in."
     );
 
     let result = sqlx::query!(
@@ -41,31 +40,32 @@ pub async fn login(
             if count > 0 {
                 match encode_jwt(&user.name, &user.email) {
                     Ok(token) => {
-                        tracing::info_span!(
-                        "Successfully logt in User",
-                         %request_id           );
+                        tracing::info!(
+                            %request_id,
+                            "Successfully logged in user"
+                        );
                         LoginResponse { token }.into_response()
                     },
                     Err(_) => {
-                        tracing::error_span!(
-                            "Error Creating JWT Token",
-                            %request_id
+                        tracing::error!(
+                            %request_id,
+                            "Error creating JWT token"
                         );
                         StatusCode::INTERNAL_SERVER_ERROR.into_response()
                     } 
                 }
             } else {
-                tracing::info_span!(
-                    "Unauthorized User",
-                    %request_id
+                tracing::info!(
+                    %request_id,
+                    "Unauthorized user"
                 );
                 StatusCode::UNAUTHORIZED.into_response()
             }
         }
         Err(_) => {
-            tracing::error_span!(
-                "Error Database, failed to log in in user",
+            tracing::error!(
                 %request_id,
+                "Database error, failed to log in user",
             );
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         },

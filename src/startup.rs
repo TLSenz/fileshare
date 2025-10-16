@@ -6,7 +6,6 @@ use axum::serve::Serve;
 use sqlx::PgPool;
 use tokio::net::TcpListener;
 use tower_http::services::ServeDir;
-use crate::db::create_pool;
 use crate::routes::download::download;
 use crate::routes::health_check;
 use crate::routes::login::login;
