@@ -8,11 +8,11 @@ use uuid::Uuid;
 use crate::model::filemodel::GetFileResponse;
 use crate::repository::filerepository::get_file_name_from_db;
 
+#[tracing::instrument(skip(pool))]
 pub async fn download(
     State(pool): State<PgPool>,
     Path(file_link): Path<String>
 ) -> impl IntoResponse {
-
     let request_id = Uuid::new_v4();
     tracing::info!(
         %request_id,
@@ -28,18 +28,21 @@ pub async fn download(
             let file_data = tokio::fs::read(&infos.filepath).await;
             match file_data {
                 Ok(data) => {
+                    tracing::info!(%request_id, path = %infos.filepath, bytes = data.len(), "Sending file");
                     let body = Body::from(data);
-                    
+
                     Response::builder()
-                        .header(header::CONTENT_TYPE, content_types.first_raw().unwrap())
+                        .header(header::CONTENT_TYPE, content_types.first_raw().unwrap_or("application/octet-stream"))
                         .body(body)
                         .unwrap()
 
                 }
-                Err(_) => {
+                Err(e) => {
                     tracing::error!(
                         %request_id,
-                        "Error finding/sending file"
+                        path = %infos.filepath,
+                        error = %e,
+                        "Error reading file from disk"
                     );
                     (StatusCode::INTERNAL_SERVER_ERROR, "File not found").into_response()
                 }
@@ -56,7 +59,9 @@ pub async fn download(
     }
 }
 
+#[tracing::instrument(skip(pool))]
 pub async fn get_file_name(pool: PgPool, file_link: &str) -> Result<GetFileResponse, Error> {
+    tracing::debug!(%file_link, "Querying DB for file by link");
 
     let file = get_file_name_from_db(pool, file_link).await?;
 
@@ -68,5 +73,6 @@ pub async fn get_file_name(pool: PgPool, file_link: &str) -> Result<GetFileRespo
         filepath: file_paths.to_string()
     };
 
+    tracing::debug!(filename = %res.filename, filepath = %res.filepath, "Resolved file metadata");
     Ok(res)
 }

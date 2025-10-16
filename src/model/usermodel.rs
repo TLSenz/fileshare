@@ -20,7 +20,7 @@ pub struct User {
     pub email: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct SignupRequest {
     pub name: String,
     pub password: String,

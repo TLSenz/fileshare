@@ -1,8 +1,9 @@
 use std::arch::x86_64::_mm256_clmulepi64_epi128;
+use axum::http::StatusCode;
 use reqwest::header::CONTENT_TYPE;
 use fileshare::configuration::get_config;
 use fileshare::db::create_pool;
-use fileshare::model::SignupRequest;
+use fileshare::model::{LoginRequest, SignupRequest};
 
 #[tokio::test]
 async  fn test_health_check() {
@@ -40,13 +41,24 @@ async fn test_sign_up() {
 async fn negative_test_sign_up() {
     let client = reqwest::Client::new();
 
-    let request = client.post("http://127.0.0.1:3000/api/signup")
-        .header(CONTENT_TYPE, "application/json")
-        .json("{}")
-        .send()
-        .await
-        .expect("Could not Connect to Backend. PLease ensure a Instance is running");
+    let mut signup_data:Vec<SignupRequest> = Vec::new();
+    signup_data.push(SignupRequest::new("".to_string(), "Sven".to_string(), "sven@test.email".to_string()));
+    signup_data.push(SignupRequest::new("Test".to_string(), "".to_string(), "sven@zemp.email".to_string()));
+    signup_data.push(SignupRequest::new("Test".to_string(), "Sven".to_string(), "svenzemp.email".to_string()));
+    //signup_data.push(SignupRequest::new("Sven".to_string(), "Test".to_string(), "test@testemail".to_string()));
 
-    println!("{:?}", request);
-    assert!(request.status().is_client_error());
+    for signup_request in signup_data  {
+        let request = client.post("http://127.0.0.1:3000/api/signup")
+            .header(CONTENT_TYPE, "application/json")
+            .json(&signup_request)
+            .send()
+            .await
+            .expect("Could not Connect to Backend. PLease ensure a Instance is running");
+
+        assert!(request.status().eq(&StatusCode::BAD_REQUEST));
+
+
+    }
+
+
 }
