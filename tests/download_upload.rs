@@ -9,6 +9,8 @@ use fileshare::model::{LoginRequest, LoginResponse, SignupRequest};
 use sqlx::*;
 async fn login() -> String {
     let client = reqwest::Client::new();
+    let signup_data = SignupRequest::new("Test".to_string(), "Test".to_string(), "test@test.email".to_string());
+    //client.post("http://127.0.0.1:3000/api/signup").header("Content-Type", "application/json").json(&signup_data).send().await.expect("COuld not OCnne");
 
     let credentials = LoginRequest::new("Test".to_string(), "Test".to_string(), "test@test.email".to_string());
     let response = client

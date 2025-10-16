@@ -1,6 +1,5 @@
 # Codebase Chores and Optimizations (What to improve)
 
-- Replace all unwrap()/expect() in async paths with structured error handling and propagate meaningful errors.
 - Standardize error types across layers (routes, service, repository) to avoid ad-hoc enums and stringly-typed errors.
 - Remove dead code, unused imports, and feature-gated blocks that are never enabled.
 - Reduce unnecessary cloning; prefer borrowing (&str, &T) where possible to minimize allocations.

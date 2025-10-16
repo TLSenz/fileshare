@@ -1,5 +1,5 @@
 use axum::extract::State;
-use axum::http::StatusCode;
+use axum::http::{Response, StatusCode};
 use axum::response::IntoResponse;
 use axum::Json;
 use sqlx::PgPool;
@@ -20,51 +20,70 @@ pub async fn login(
         "Login request received"
     );
 
+    // Fetch stored password hash for the given user and email
     let result = sqlx::query!(
         r#"
-        SELECT COUNT(*) as count
+        SELECT password as "password!" 
         FROM users
-        WHERE name = $1 AND password = $2 AND email = $3
+        WHERE name = $1 AND email = $2
         LIMIT 1
         "#,
         user.name,
-        user.password,
         user.email
     )
-    .fetch_one(&pool)
+    .fetch_optional(&pool)
     .await;
 
     match result {
-        Ok(record) => {
-            let count = record.count.unwrap_or(0);
-            if count > 0 {
-                match encode_jwt(&user.name, &user.email) {
-                    Ok(token) => {
-                        tracing::info!(
-                            %request_id,
-                            "Successfully logged in user"
-                        );
-                        LoginResponse { token }.into_response()
-                    },
-                    Err(_) => {
-                        tracing::error!(
-                            %request_id,
-                            "Error creating JWT token"
-                        );
-                        StatusCode::INTERNAL_SERVER_ERROR.into_response()
-                    } 
+        Ok(Some(record)) => {
+            // Verify plaintext password against stored bcrypt hash
+            match bcrypt::verify(&user.password, &record.password) {
+                Ok(true) => {
+                    match encode_jwt(&user.name, &user.email) {
+                        Ok(token) => {
+                            tracing::info!(
+                                %request_id,
+                                "Successfully logged in user"
+                            );
+                            LoginResponse { token }.into_response()
+                        },
+                        Err(_) => {
+                            tracing::error!(
+                                %request_id,
+                                "Error creating JWT token"
+                            );
+                            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+                        }
+                    }
                 }
-            } else {
-                tracing::info!(
-                    %request_id,
-                    "Unauthorized user"
-                );
-                StatusCode::UNAUTHORIZED.into_response()
+                Ok(false) => {
+                    tracing::info!(
+                        %request_id,
+                        "Unauthorized user: invalid credentials"
+                    );
+                    StatusCode::UNAUTHORIZED.into_response()
+                }
+                Err(e) => {
+                    tracing::error!(
+                        %request_id,
+                        error = %e,
+                        "Error verifying password hash"
+                    );
+                    StatusCode::INTERNAL_SERVER_ERROR.into_response()
+                }
             }
         }
-        Err(_) => {
+        Ok(None) => {
+            tracing::info!(
+                %request_id,
+                "Unauthorized user: user not found"
+            );
+            StatusCode::UNAUTHORIZED.into_response()
+        }
+        Err(e) => {
             tracing::error!(
                 %request_id,
+                error = %e,
                 "Database error, failed to log in user",
             );
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
