@@ -17,7 +17,7 @@ pub async fn login(
         %request_id,
         user_email = %user.email,
         user_name = %user.name,
-        "User is Logging in."
+        "Login request received"
     );
 
     let result = sqlx::query!(

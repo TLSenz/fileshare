@@ -12,11 +12,12 @@ pub async fn signup(
 ) -> Result<impl IntoResponse, StatusCode> {
 
     let request_id = Uuid::new_v4();
-    tracing::info!(
+    tracing::info_span!(
+        "User is Logging in.",
         %request_id,
         user_email = %user.email,
         user_name = %user.name,
-        "User is signing up"
+        "Signup request received"
     );
 
     sqlx::query!(

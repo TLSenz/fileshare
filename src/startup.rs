@@ -23,7 +23,7 @@ pub async fn startup(listener: TcpListener, pg_pool: PgPool) -> Result<Serve<Tcp
         .nest_service("/files", ServeDir::new("content"))
         .with_state(pg_pool);
 
-    println!("Server running on http://0.0.0.0:3000");
+    tracing::info!("Server running on http://0.0.0.0:3000");
     let server = serve(listener, app);
 
     Ok(server)

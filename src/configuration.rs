@@ -41,7 +41,7 @@ pub fn build_subscriber(log_format: LogFormat, filter: EnvFilter) {
             tracing_subscriber::fmt()
                 .with_env_filter(filter)
                 .compact()
-                .init();
+                .init()
         }
         LogFormat::Full => {
             tracing_subscriber::fmt()
@@ -51,19 +51,19 @@ pub fn build_subscriber(log_format: LogFormat, filter: EnvFilter) {
                 .with_thread_ids(true)
                 .with_thread_names(true)
                 .compact()
-                .init();
+                .init()
         }
         LogFormat::Pretty => {
             tracing_subscriber::fmt()
                 .with_env_filter(filter)
                 .pretty()
-                .init();
+                .init()
         }
         LogFormat::Json => {
             tracing_subscriber::fmt()
                 .with_env_filter(filter)
                 .json()
-                .init();
+                .init()
         }
     }
 }
