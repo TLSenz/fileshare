@@ -57,7 +57,7 @@ async fn test_upload() {
         .expect("Could not Connect to Backend. PLease ensure a Instance is running");
 
     assert!(response.status().is_success());
-    fs::remove_file("content/test_file12345").expect("Could not delete file");
+    fs::remove_file("content/test_file12345.markdown").expect("Could not delete file");
     
     sqlx::query("Delete from file where file_name = 'test_file12345'").fetch_all(&db_pool).await.unwrap();
 

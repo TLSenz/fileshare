@@ -57,11 +57,8 @@ pub async fn download(
 }
 
 pub async fn get_file_name(pool: PgPool, file_link: &str) -> Result<GetFileResponse, Error> {
-    let file_link: Vec<_> = file_link.split("/").collect();
-    let file_name_hash = file_link[file_link.len() - 1];
-    println!("{:?}", file_link);
-    println!("{}", file_name_hash);
-    let file = get_file_name_from_db(pool, file_name_hash).await?;
+
+    let file = get_file_name_from_db(pool, file_link).await?;
 
     let file_names = &file.file_name;
     let file_paths = &file.storage_path;

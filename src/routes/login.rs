@@ -2,7 +2,6 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::Json;
-use serde::__private228::ser::serialize_tagged_newtype;
 use sqlx::PgPool;
 use uuid::Uuid;
 use crate::configuration::build_subscriber;
