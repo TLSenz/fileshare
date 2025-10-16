@@ -1,6 +1,6 @@
-use std::io::Error;
-use config::{Config, ConfigError};
+use config::ConfigError;
 use serde::{Deserialize, Serialize};
+use tracing_subscriber::EnvFilter;
 
 #[derive(Deserialize,Serialize)]
 pub struct Settings{
@@ -18,7 +18,9 @@ pub struct DatabaseSettings{
 #[derive(Deserialize,Serialize)]
 pub struct ApplicationSettings{
     pub host: String,
-    pub port: u16
+    pub port: u16,
+    pub log_level: LogLevel,
+    pub log_format: LogFormat
 }
 
 
@@ -31,6 +33,42 @@ pub fn get_config() ->Result<Settings, ConfigError>{
     let settings = config::Config::builder().add_source(config::File::from(config_file_path)).build()?;
     settings.try_deserialize::<Settings>()
 }
+
+
+pub fn build_subscriber(log_format: LogFormat, filter: EnvFilter) {
+    match log_format {
+        LogFormat::Compact => {
+            tracing_subscriber::fmt()
+                .with_env_filter(filter)
+                .compact()
+                .init()
+        }
+        LogFormat::Full => {
+            tracing_subscriber::fmt()
+                .with_env_filter(filter)
+                .with_level(true)
+                .with_target(true)
+                .with_thread_ids(true)
+                .with_thread_names(true)
+                .compact()
+                .init()
+        }
+        LogFormat::Pretty => {
+            tracing_subscriber::fmt()
+                .with_env_filter(filter)
+                .pretty()
+                .init()
+        }
+        LogFormat::Json => {
+            tracing_subscriber::fmt()
+                .with_env_filter(filter)
+                .json()
+                .init()
+        }
+    }
+}
+
+
 
 impl Settings {
 
@@ -45,4 +83,33 @@ impl Settings {
         format!("{}:{}",self.application.host,self.application.port)
     }
 
+}
+#[derive(Serialize, Deserialize, Copy, Clone, Debug)]
+pub enum LogLevel {
+    Trace,
+    Info,
+    Debug,
+    Warn,
+    Error
+}
+
+#[derive(Serialize, Deserialize, Copy, Clone, Debug)]
+pub enum LogFormat{
+    Compact,
+    Full,
+    Pretty,
+    Json
+
+}
+
+impl LogLevel {
+   pub  fn as_str(&self) -> &'static str {
+        match self {
+            LogLevel::Info => "info",
+            LogLevel::Debug => "debug",
+            LogLevel::Warn => "warn",
+            LogLevel::Error => "error",
+            LogLevel::Trace => "trace",
+        }
+    }
 }

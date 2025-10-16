@@ -26,7 +26,7 @@ async fn login() -> String {
 }
 #[tokio::test]
 async fn test_upload() {
-    let db_pool = create_pool().await.expect("no connection to db");
+    let db_pool = create_pool("postgres://postgres:example@localhost/fileshare").await.expect("no connection to db");
     let token = login().await;
     let client = reqwest::Client::new();
 
@@ -57,7 +57,7 @@ async fn test_upload() {
         .expect("Could not Connect to Backend. PLease ensure a Instance is running");
 
     assert!(response.status().is_success());
-    fs::remove_file("content/test_file12345").expect("Could not delete file");
+    fs::remove_file("content/test_file12345.markdown").expect("Could not delete file");
     
     sqlx::query("Delete from file where file_name = 'test_file12345'").fetch_all(&db_pool).await.unwrap();
 

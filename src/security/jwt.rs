@@ -16,12 +16,11 @@ use crate::model::usermodel::ConversionError;
 use crate::repository::userrepository::check_if_user_exist;
 
 pub fn encode_jwt(name: &str, email: &str) -> Result<String, ConversionError>{
-    // Set token expiration to 24 hours from now
+
     let expiration = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("Time went backwards")
-        .as_secs() as usize + 86400; // 24 hours in seconds
-
+        .as_secs() as usize + 86400; 
     let jwt_info = EncodeJWT {
         username: name.to_string(),
         email: email.to_string(),
@@ -39,7 +38,7 @@ pub fn decode_jwt(jwt_token: String) -> Result<TokenData<EncodeJWT>, ConversionE
     dotenv().ok();
     let secret = env::var("JWT_SECRET")?;
 
-    // Create validation with expiration validation enabled
+
     let mut validation = Validation::new(Algorithm::HS256);
     validation.validate_exp = true;
 
@@ -63,7 +62,7 @@ pub async fn authenticate(
     req: Request,
     next: Next
 ) -> Result<Response<Body>, AuthError> {
-    // Get authorization header
+   
     let auth_header = req.headers().get(http::header::AUTHORIZATION);
     let auth_header = match auth_header {
         Some(header) => header.to_str().map_err(|_| 
@@ -72,7 +71,7 @@ pub async fn authenticate(
         None => Err(AuthError("Authorization header is required".to_string(), StatusCode::FORBIDDEN))
     }?;
 
-    // Split the header into parts and validate format
+
     let mut parts = auth_header.split_whitespace();
     let bearer = parts.next();
     let token = parts.next();
@@ -82,16 +81,16 @@ pub async fn authenticate(
         return Err(AuthError("Invalid authorization scheme, expected 'Bearer'".to_string(), StatusCode::FORBIDDEN));
     }
 
-    // Validate token presence
+ 
     let token = match token {
         Some(t) => t,
         None => return Err(AuthError("Token is missing".to_string(), StatusCode::FORBIDDEN))
     };
 
-    // Decode and validate the token
+
     let token_data = decode_jwt(token.to_string())?;
 
-    // Check if user exists in database
+    
     match check_if_user_exist(pool, token_data.claims).await {
         Ok(_) => {}, // User exists, continue
         Err(_) => return Err(AuthError("User in JWT token does not exist in database".to_string(), StatusCode::FORBIDDEN))

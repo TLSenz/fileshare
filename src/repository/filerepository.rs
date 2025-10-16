@@ -39,7 +39,7 @@ pub async fn write_name_to_db(pool: PgPool, storing_file: FileToInsert) -> Resul
 }
 
 pub async fn get_file_name_from_db(pool: PgPool, file_name: &str) -> Result<File, Error> {
-    println!("{}", file_name.to_string());
+    println!("{}", file_name);
     let result = sqlx::query_as!(
         File,
         r#"

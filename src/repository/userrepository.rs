@@ -1,34 +1,8 @@
-use std::error::Error;
 
 use sqlx::PgPool;
-use crate::model::{ConversionError, EncodeJWT, LoginRequest, SignupRequest, User};
+use crate::model::{ConversionError, EncodeJWT, LoginRequest};
 
-pub async fn create_user(pool: PgPool, new_user: SignupRequest) -> Result<(), Box<dyn Error>> {
-    let result = sqlx::query_as!(
-        User,
-        r#"
-        INSERT INTO users (name, email, password)
-        VALUES ($1, $2, $3)
-        RETURNING *
-        "#,
-        new_user.name,
-        new_user.email,
-        new_user.password
-    )
-    .fetch_one(&pool)
-    .await;
 
-    match result {
-        Ok(user) => {
-            println!("User created: {:?}", user);
-            Ok(())
-        }
-        Err(err) => {
-            println!("Error creating user: {:?}", err);
-            Err(Box::new(err))
-        }
-    }
-}
 
 pub async fn check_if_user_exist(pool: PgPool, user: EncodeJWT) -> Result<bool, ConversionError> {
     let result = sqlx::query!(
