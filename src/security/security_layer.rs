@@ -1,15 +1,21 @@
 
 use std::env;
+use std::io::ErrorKind::InvalidFilename;
+use std::net::IpAddr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use axum::http;
+use axum::{http, Error};
 use axum::body::Body;
-use axum::http::{Response, StatusCode};
+use axum::http::{HeaderMap, Response, StatusCode};
 use axum::extract::{Request, State};
 use axum::middleware::Next;
 use dotenv::dotenv;
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header, Validation, decode, DecodingKey, TokenData};
-use sqlx::PgPool;
+use redis::Commands;
+use reqwest::header::FORWARDED;
+use sqlx::{ty_match, PgPool};
+use sqlx::pool::MaybePoolConnection::Connection;
+use crate::model::RateError;
 use crate::model::securitymodel::{AuthError, EncodeJWT};
 use crate::model::securitymodel::AuthError::*;
 use crate::model::usermodel::ConversionError;
@@ -97,4 +103,40 @@ pub async fn authenticate(
     }
 
     Ok(next.run(req).await)
+}
+
+// Improve Logging with getting the User Info from the JWT
+pub  async fn rateLimit(request: Request, next: Next) -> Result<Response<Body>, RateError >{
+
+    let  c = match redis::Client::open("redis://127.0.0.1") {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!({
+            "Could not parse Redis URL"
+        });
+           return  Ok(next.run(request).await) }
+    };
+
+    let ip_address = get_ip(request.headers())
+        .ok_or_else(|| {
+            tracing::error!("Could not get IP from request, rejecting request");
+            RateError::RateError("Could not resolve your IP", StatusCode::PRECONDITION_FAILED)
+        })?;
+
+
+    todo!()
+}
+
+fn get_ip(header: &HeaderMap) -> Option<IpAddr>{
+
+    if  let Some(client_ip_adress) =  header.get("X-Forwarded-For"){
+        if let Ok(client_ip_adress) = client_ip_adress.to_str(){
+            if let Some(client_ip) = client_ip_adress.split(",").next() {
+                if  let Ok(ip) = client_ip.trim().parse(){
+                    return Some(ip)
+                }
+            }
+        }
+    }
+    None
 }

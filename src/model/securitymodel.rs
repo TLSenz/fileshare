@@ -52,3 +52,27 @@ impl IntoResponse for AuthError{
         }
     }
 }
+#[derive(Debug)]
+pub enum RateError<'a> {
+    RateError(&'a str, StatusCode)
+}
+impl fmt::Display for RateError<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            RateError::RateError(message, status) => write!(f,"Error: {},StatusCode: {}", message, status)
+        }
+
+    }
+}
+impl IntoResponse for RateError<'_> {
+    fn into_response(self) -> Response {
+        match self {
+            RateError::RateError(message, status_code) =>  {
+                let body = serde_json::json!({
+                    "Error Message": message
+                });
+                (status_code, axum::Json(body)).into_response()
+            }
+        }
+    }
+}
