@@ -1,4 +1,5 @@
 
+use redis::AsyncCommands;
 use std::env;
 use std::io::ErrorKind::InvalidFilename;
 use std::net::IpAddr;
@@ -106,22 +107,53 @@ pub async fn authenticate(
 }
 
 // Improve Logging with getting the User Info from the JWT
-pub  async fn rateLimit(request: Request, next: Next) -> Result<Response<Body>, RateError >{
-
-    let  c = match redis::Client::open("redis://127.0.0.1") {
-        Ok(c) => c,
-        Err(e) => {
-            tracing::error!({
+pub  async fn rateLimit(request: Request, next: Next, client_rate_limit: i32) -> Result<Response<Body>, RateError<'static> >{
+    let mut r = match redis::Client::open("redis://127.0.0.1") {
+        Ok(client) => {
+            match client.get_multiplexed_async_connection().await {
+                Ok(conn) => conn,
+                Err(e) => {
+                    tracing::error!({
             "Could not parse Redis URL"
-        });
-           return  Ok(next.run(request).await) }
+                            });
+                    return  Ok(next.run(request).await)
+                }
+            }
+        },
+        Err(e) => {
+            println!("Failed to create Redis client: {e}");
+            return  Ok(next.run(request).await)
+        }
     };
+
 
     let ip_address = get_ip(request.headers())
         .ok_or_else(|| {
             tracing::error!("Could not get IP from request, rejecting request");
             RateError::RateError("Could not resolve your IP", StatusCode::PRECONDITION_FAILED)
         })?;
+
+    if let  Ok(current_count) = r.get(ip_address.to_string()).await{
+         if current_count > client_rate_limit {
+             tracing::warn!({
+                 "A client has exided the Rate Limit"
+             });
+            return  Err(RateError::RateError("Could not resolve your IP", StatusCode::PRECONDITION_FAILED))
+         }
+        if let Ok(updating_rate) =r.set(ip_address.to_string(), current_count + 1).await{
+            tracing::debug!({
+                "Update Redis Rate limit for Ip Address"
+            });
+            return  Ok(next.run(request).await)
+        }
+        else {
+            return  Err(RateError::RateError("Could not resolve your IP", StatusCode::PRECONDITION_FAILED))
+        }
+    }
+    else {
+        let _ = r.set_options()
+    }
+
 
 
     todo!()
