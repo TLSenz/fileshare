@@ -1,21 +1,15 @@
-
 use redis::AsyncCommands;
 use std::env;
-use std::io::ErrorKind::InvalidFilename;
 use std::net::IpAddr;
 use std::time::{SystemTime, UNIX_EPOCH};
-
-use axum::{http, Error};
+use axum::http;
 use axum::body::Body;
 use axum::http::{HeaderMap, Response, StatusCode};
 use axum::extract::{Request, State};
 use axum::middleware::Next;
 use dotenv::dotenv;
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header, Validation, decode, DecodingKey, TokenData};
-use redis::Commands;
-use reqwest::header::FORWARDED;
-use sqlx::{ty_match, PgPool};
-use sqlx::pool::MaybePoolConnection::Connection;
+use sqlx::PgPool;
 use crate::model::RateError;
 use crate::model::securitymodel::{AuthError, EncodeJWT};
 use crate::model::securitymodel::AuthError::*;
@@ -107,7 +101,7 @@ pub async fn authenticate(
 }
 
 // Improve Logging with getting the User Info from the JWT
-pub  async fn rateLimit(request: Request, next: Next, client_rate_limit: i32) -> Result<Response<Body>, RateError<'static> >{
+pub  async fn rateLimit(request: Request, next: Next, client_rate_limit: i32, ttl: i32) -> Result<Response<Body>, RateError<'static> >{
     let mut r = match redis::Client::open("redis://127.0.0.1") {
         Ok(client) => {
             match client.get_multiplexed_async_connection().await {
@@ -133,30 +127,15 @@ pub  async fn rateLimit(request: Request, next: Next, client_rate_limit: i32) ->
             RateError::RateError("Could not resolve your IP", StatusCode::PRECONDITION_FAILED)
         })?;
 
-    if let  Ok(current_count) = r.get(ip_address.to_string()).await{
-         if current_count > client_rate_limit {
-             tracing::warn!({
-                 "A client has exided the Rate Limit"
-             });
-            return  Err(RateError::RateError("Could not resolve your IP", StatusCode::PRECONDITION_FAILED))
-         }
-        if let Ok(updating_rate) =r.set(ip_address.to_string(), current_count + 1).await{
-            tracing::debug!({
-                "Update Redis Rate limit for Ip Address"
-            });
-            return  Ok(next.run(request).await)
-        }
-        else {
-            return  Err(RateError::RateError("Could not resolve your IP", StatusCode::PRECONDITION_FAILED))
-        }
+    let count: i32 = AsyncCommands::incr(&mut r, ip_address.to_string(), 1).await?;
+
+    if count == 1 {
+        let _: () = AsyncCommands::expire(&mut r, ip_address.to_string(), (client_rate_limit * 60).try_into().unwrap()).await?;
     }
-    else {
-        let _ = r.set_options()
+    if count > ttl {
+        return Err(RateError::RateError("Rate limit exceeded", StatusCode::TOO_MANY_REQUESTS));
     }
-
-
-
-    todo!()
+    Ok(next.run(request).await)
 }
 
 fn get_ip(header: &HeaderMap) -> Option<IpAddr>{
