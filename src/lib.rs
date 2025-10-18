@@ -6,3 +6,5 @@ pub mod service;
 pub mod db;
 pub mod startup;
 pub mod configuration;
+pub mod mock;
+

@@ -1,3 +1,4 @@
+use std::env;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
@@ -25,6 +26,8 @@ pub async fn signup(
         });
        return  Err(StatusCode::BAD_REQUEST)
     }
+    let hashed_password = bcrypt::hash(user.password, 12).map_err(|_|  StatusCode::INTERNAL_SERVER_ERROR)?;
+    tracing::debug!(%request_id, "Password hashed for new user");
 
     sqlx::query!(
         r#"
@@ -33,7 +36,8 @@ pub async fn signup(
         "#,
         user.name,
         user.email,
-        user.password
+        hashed_password
+
     )
     .execute(&pool)
     .await

@@ -1,5 +1,5 @@
 use reqwest::StatusCode;
-use fileshare::model::{LoginRequest, LoginResponse};
+use fileshare::model::{LoginRequest, LoginResponse, SignupRequest};
 
 #[tokio::test]
 async fn test_login() {
@@ -26,8 +26,8 @@ async fn negative_test_login() {
     let client = reqwest::Client::new();
 
     let mut login_data:Vec<LoginRequest> = Vec::new();
-    login_data.push(LoginRequest::new("Test".to_string(), "Sven".to_string(), "test@test.email".to_string()));
-    login_data.push(LoginRequest::new("Test".to_string(), "Test".to_string(), "sven@zemp.email".to_string()));
+    login_data.push(LoginRequest::new("".to_string(), "Sven".to_string(), "test@test.email".to_string()));
+    login_data.push(LoginRequest::new("Test".to_string(), "".to_string(), "sven@zemp.email".to_string()));
     login_data.push(LoginRequest::new("Sven".to_string(), "Test".to_string(), "test@test.email".to_string()));
 
     for loginRequest in login_data.iter() {
