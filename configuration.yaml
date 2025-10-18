@@ -3,11 +3,14 @@ application:
   port: 3000
   log_level: "Info"
   log_format: "Compact"
+  ttl: 1
+  rate_limit: 100
 database:
   username: "postgres"
   host: "127.0.0.1"
   password: "example"
   name: "fileshare"
   port: 5432
+
 
 

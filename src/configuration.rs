@@ -1,3 +1,4 @@
+use aws_config::imds::client::error::FailedToLoadToken;
 use config::ConfigError;
 use serde::{Deserialize, Serialize};
 use tracing_subscriber::EnvFilter;
@@ -20,7 +21,9 @@ pub struct ApplicationSettings{
     pub host: String,
     pub port: u16,
     pub log_level: LogLevel,
-    pub log_format: LogFormat
+    pub log_format: LogFormat,
+    pub ttl: i32,
+    pub rate_limit: i32
 }
 
 

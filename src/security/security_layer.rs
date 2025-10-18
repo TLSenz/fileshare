@@ -1,15 +1,16 @@
 use redis::AsyncCommands;
 use std::env;
-use std::net::IpAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::time::{SystemTime, UNIX_EPOCH};
 use axum::http;
 use axum::body::Body;
 use axum::http::{HeaderMap, Response, StatusCode};
-use axum::extract::{Request, State};
+use axum::extract::{Request, State, ConnectInfo};
 use axum::middleware::Next;
 use dotenv::dotenv;
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header, Validation, decode, DecodingKey, TokenData};
 use sqlx::PgPool;
+use tower_http::metrics::in_flight_requests;
 use crate::model::RateError;
 use crate::model::securitymodel::{AuthError, EncodeJWT};
 use crate::model::securitymodel::AuthError::*;
@@ -63,7 +64,9 @@ pub async fn authenticate(
     req: Request,
     next: Next
 ) -> Result<Response<Body>, AuthError> {
-   
+
+
+
     let auth_header = req.headers().get(http::header::AUTHORIZATION);
     let auth_header = match auth_header {
         Some(header) => header.to_str().map_err(|_| 
@@ -101,41 +104,40 @@ pub async fn authenticate(
 }
 
 // Improve Logging with getting the User Info from the JWT
-pub  async fn rateLimit(request: Request, next: Next, client_rate_limit: i32, ttl: i32) -> Result<Response<Body>, RateError<'static> >{
+pub  async fn rate_limit(request: Request, next: Next) -> Result<Response<Body>, RateError<'static> >{
     let mut r = match redis::Client::open("redis://127.0.0.1") {
         Ok(client) => {
             match client.get_multiplexed_async_connection().await {
                 Ok(conn) => conn,
-                Err(e) => {
-                    tracing::error!({
-            "Could not parse Redis URL"
-                            });
-                    return  Ok(next.run(request).await)
+                Err(_e) => {
+                    tracing::error!("Could not connect to Redis; letting request pass");
+                    return Ok(next.run(request).await)
                 }
             }
         },
         Err(e) => {
-            println!("Failed to create Redis client: {e}");
-            return  Ok(next.run(request).await)
+            println!("Could not parse Redis URL: {e}");
+            return Ok(next.run(request).await)
         }
     };
+    let client_rate_limit = 100;
+    let ttl = 1;
 
-
-    let ip_address = get_ip(request.headers())
-        .ok_or_else(|| {
-            tracing::error!("Could not get IP from request, rejecting request");
-            RateError::RateError("Could not resolve your IP", StatusCode::PRECONDITION_FAILED)
-        })?;
-
-    let count: i32 = AsyncCommands::incr(&mut r, ip_address.to_string(), 1).await?;
-
-    if count == 1 {
-        let _: () = AsyncCommands::expire(&mut r, ip_address.to_string(), (client_rate_limit * 60).try_into().unwrap()).await?;
+    if let Some(ip_address) = request.extensions().get::<ConnectInfo<SocketAddr>>(){
+        tracing::debug!("Client IP {:?}", ip_address);
+        let count: i32 = AsyncCommands::incr(&mut r, ip_address.to_string(), 1).await?;
+        if count == 1 {
+            let _: () = AsyncCommands::expire(&mut r, ip_address.to_string(), (ttl * 60).try_into().unwrap()).await?;
+        }
+        if count > client_rate_limit {
+            tracing::warn!("Client exided Rate Limit");
+            return Err(RateError::RateError("Rate limit exceeded", StatusCode::TOO_MANY_REQUESTS));
+        }
+        return Ok(next.run(request).await)
     }
-    if count > ttl {
-        return Err(RateError::RateError("Rate limit exceeded", StatusCode::TOO_MANY_REQUESTS));
-    }
-    Ok(next.run(request).await)
+    return Err(RateError::RateError("Rate limit exceeded", StatusCode::TOO_MANY_REQUESTS));
+
+
 }
 
 fn get_ip(header: &HeaderMap) -> Option<IpAddr>{
