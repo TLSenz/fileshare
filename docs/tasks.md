@@ -7,7 +7,7 @@ This document contains a prioritized list of actionable tasks to improve the Fil
 1. [x] Implement password hashing using a strong algorithm (bcrypt/Argon2) instead of storing plain text passwords
 2. [x] Add proper JWT token expiration and refresh mechanism
 3. [x] Implement proper error handling in JWT functions instead of using unwrap()
-4. [ ] Add rate limiting for authentication endpoints to prevent brute force attacks
+4. [x] Add rate limiting for authentication endpoints to prevent brute force attacks
 5. [ ] Implement input validation and sanitization for all user inputs
 6. [ ] Add CSRF protection for API endpoints
 7. [ ] Implement proper file type validation and scanning before storage

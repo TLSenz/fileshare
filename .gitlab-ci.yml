@@ -1,31 +1,51 @@
-image: 
-  name: sonarsource/sonar-scanner-cli:11
-  entrypoint: [""]
-
-variables:
-  SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
-  GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
-
 stages:
-  - build-sonar
+  - preconfigure
+  - build
+  - test
+  - publish
 
-
-build-sonar:
-  stage: build-sonar
-  
-  
-  cache:
-    policy: pull-push
-    key: "sonar-cache-$CI_COMMIT_REF_SLUG"
+build:amd64:
+  stage: build
+  image: rust
+  script:
+    - cargo build --release
+  artifacts:
     paths:
-      - "${SONAR_USER_HOME}/cache"
-      - sonar-scanner/
+      - target/release/fileshare
       
-  script: 
-  - sonar-scanner -Dsonar.host.url="${SONAR_HOST_URL}"
-  allow_failure: true
-  rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: $CI_COMMIT_BRANCH == 'master'
-    - if: $CI_COMMIT_BRANCH == 'main'
-    - if: $CI_COMMIT_BRANCH == 'develop'
+tests-integration-test:
+  stage: test
+  image: rust
+  services:
+    - name: postgres:16
+      alias: PGDB
+    - name: redis:8
+      alias: cache
+  variables:
+    POSTGRES_DB: fileshare
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: example
+    DATABASE_URL: postgres://myuser:mypass@db:5432/mydb
+  dependencies:
+    - build:amd64
+  script:
+    - until pg_isready -h db -U $POSTGRES_USER; do echo "Waiting for Postgres..."; sleep 1; done
+    - cargo install sqlx-cli --no-default-features --features postgres
+    - sqlx database create
+    - sqlx database migrate
+    - ./target/release/my_backend
+    - until [ curl:localhost:3000/api/healthcheck ]; do
+      echo "Waiting on Backend to be Started"
+      done
+    - cargo test
+
+
+
+rustdoc:
+  stage: build
+  image: rust
+  script:
+    - cargo doc
+  artifacts:
+    paths:
+      - target/doc
