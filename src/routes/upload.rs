@@ -21,18 +21,20 @@ pub async fn upload_file(
 
     while let Some(field) = file.next_field().await? {
         let mut content_type = String::new();
+        tracing::info!("GOt into while Loop");
 
         let other_file_name = field
             .name()
             .map(|s| s.to_string())
             .unwrap_or_else(|| "unnamed".to_string());
 
-        tracing::debug!(original_name = %other_file_name, "Processing multipart field");
+        tracing::info!(original_name = %other_file_name, "Processing multipart field");
 
         let _exists = check_if_file_name_exists(pool.clone(), other_file_name.clone()).await?;
-
+        tracing::info!("got datavbase call");
         let file_type = field.content_type();
 
+        tracing::info!("matching file type");
         match file_type {
             Some(file_type) => {
                 let filetype_splited: Vec<&str> = file_type.split('/') .collect();
@@ -46,15 +48,15 @@ pub async fn upload_file(
         let filename = format!("content/{}.{}", other_file_name, content_type);
         let data = field.bytes().await.map_err(ConversionError::from)?;
 
-        tracing::debug!(%filename, bytes = data.len(), "Received file data");
+        tracing::info!(%filename, bytes = data.len(), "Received file data");
 
         let size = data.len();
         let size = size.try_into()?;
 
-        tracing::trace!(original_name = %other_file_name, bytes = size, "Calculating hashes");
+        tracing::info!(original_name = %other_file_name, bytes = size, "Calculating hashes");
         let name_link_hash = hash(filename.clone(), 4)?;
         let data_hash = hash(data.clone(), 4)?;
-
+        tracing::info!(original_name = %other_file_name, bytes = size, "Calculated hashes");
         let file_struct: FileToInsert = FileToInsert {
             file_name: other_file_name.clone(),
             hashed_file_name: name_link_hash.clone(),
@@ -111,11 +113,13 @@ pub async fn aws(data: &Bytes, data_info: &FileToInsert) -> Result<(), Box<dyn s
 
 #[tracing::instrument(skip(data))]
 pub async fn write_data(data: &Bytes, filepath: &String) -> Result<(), ConversionError> {
-    tracing::debug!(path = %filepath, bytes = data.len(), "Writing data to local storage");
+    tracing::info!(path = %filepath, bytes = data.len(), "Writing data to local storage");
     let mut file = File::create(filepath)
         .map_err(|_| ConversionError("Error Creating File".to_string()))?;
+    tracing::info!( "Created File");
     file
         .write(data)
         .map_err(|_| ConversionError("Error writing Data to File".to_string()))?;
+    tracing::info!( "Wrote to file");
     Ok(())
 }

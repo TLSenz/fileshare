@@ -1,3 +1,4 @@
+use axum::http::header::CONTENT_TYPE;
 use reqwest::StatusCode;
 use fileshare::model::{LoginRequest, LoginResponse, SignupRequest};
 
@@ -7,6 +8,7 @@ async fn test_login() {
     let client = reqwest::Client::new();
 
     let login_data = LoginRequest::new("Test".to_string(), "Test".to_string(), "test@test.email".to_string());
+
 
     let responnse = client
         .post("http://127.0.0.1:3000/api/login")

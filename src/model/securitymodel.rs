@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::model::usermodel;
 
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct EncodeJWT{
     pub(crate) username: String,
     pub(crate) email: String,

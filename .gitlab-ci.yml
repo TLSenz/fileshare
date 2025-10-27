@@ -1,62 +1,114 @@
-stages:
-  - build
-  - test
-  - publish
-
-build:amd64:
-  stage: build
-  image: rust
-  script:
-    - cargo build --release
-  artifacts:
-    paths:
-      - target/release/fileshare
-      
-tests-integration-test:
-  stage: test
-  image: rust
-  services:
-    - name: postgres:16
-      alias: PGDB
-    - name: redis:8
-      alias: cache
-  variables:
-    POSTGRES_DB: fileshare
-    POSTGRES_USER: postgres
-    POSTGRES_PASSWORD: example
-    DATABASE_URL: postgres://myuser:mypass@db:5432/mydb
-  dependencies:
-    - build:amd64
-  script:
-    - until pg_isready -h db -U $POSTGRES_USER; do echo "Waiting for Postgres..."; sleep 1; done
-    - cargo install sqlx-cli --no-default-features --features postgres
-    - sqlx database create
-    - sqlx database migrate
-    - ./target/release/my_backend
-    - until [ curl:localhost:3000/api/healthcheck ]; do
-      echo "Waiting on Backend to be Started"
-      done
-    - cargo test
+  stages:
+    - lint
+    - build
+    - test
+    - publish
 
 
+  cargo-fmt:
+    stage: lint
+    image: rust
+    rules:
+      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    script:
+      - rustup component add rustfmt
+      - cargo fmt --all
 
-rustdoc:
-  stage: build
-  image: rust
-  script:
-    - cargo doc
-  artifacts:
-    paths:
-      - target/doc
+  cargo-check:
+    stage: lint
+    image: rust
+    rules:
+      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    variables:
+      SQLX_OFFLINE: true
+    script:
+      - cargo add check
+      - cargo check
 
-docker-build:
-  stage: publish
-  image: docker:20.10.16
-  services:
-    - docker:20.10.16-dind
+  clippy:
+    stage: lint
+    image: rust
+    rules:
+      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    variables:
+      SQLX_OFFLINE: true
+    script:
+      - rustup component add clippy
+      - cargo clippy
 
-  before_script:
-    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-  script:
-    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
-    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+  cargo-audit:
+    stage: lint
+    image: rust
+    rules:
+      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    script:
+      - cargo install cargo-audit
+      - cargo audit || true
+
+  build:amd64:
+    stage: build
+    image: rust
+    script:
+      - cargo build --release
+    rules:
+      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    artifacts:
+      paths:
+        - target/release/fileshare
+    variables:
+      SQLX_OFFLINE: true
+
+  tests-integration-test:
+    stage: test
+    image: rust
+    services:
+      - name: postgres:16
+        alias: pgdb
+      - name: redis:8
+        alias: cache
+    variables:
+      POSTGRES_DB: fileshare
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: example
+      DATABASE_URL: postgres://postgres:example@pgdb:5432/fileshare
+    dependencies:
+      - build:amd64
+    rules:
+      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    script:
+      - apt-get update && apt-get install -y postgresql-client
+      - until pg_isready -h pgdb -p 5432 -U "$POSTGRES_USER"; do echo "Waiting for Postgres..."; sleep 1; done
+      - cargo install sqlx-cli --no-default-features --features postgres
+      - sqlx database create
+      - sqlx migrate run
+      - mkdir content
+      - ./target/release/fileshare &
+      - sleep 3
+      - cargo test
+
+
+
+  rustdoc:
+    stage: build
+    image: rust
+    script:
+      - cargo doc
+    artifacts:
+      paths:
+        - target/doc
+    rules:
+      - if: '$CI_COMMIT_BRANCH == "main"'
+
+  docker-build:
+    stage: publish
+    image: docker:20.10.16
+    services:
+      - docker:20.10.16-dind
+    rules:
+      - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
+
+    before_script:
+      - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    script:
+      - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
+      - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA

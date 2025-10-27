@@ -7,10 +7,12 @@ use axum::http::header::CONTENT_TYPE;
 use fileshare::db::create_pool;
 use fileshare::model::{LoginRequest, LoginResponse, SignupRequest};
 use sqlx::*;
+use fileshare::configuration::get_config;
+
 async fn login() -> String {
     let client = reqwest::Client::new();
     let signup_data = SignupRequest::new("Test".to_string(), "Test".to_string(), "test@test.email".to_string());
-    //client.post("http://127.0.0.1:3000/api/signup").header("Content-Type", "application/json").json(&signup_data).send().await.expect("COuld not OCnne");
+    client.post("http://127.0.0.1:3000/api/signup").header("Content-Type", "application/json").json(&signup_data).send().await.expect("COuld not OCnne");
 
     let credentials = LoginRequest::new("Test".to_string(), "Test".to_string(), "test@test.email".to_string());
     let response = client
@@ -28,7 +30,8 @@ async fn login() -> String {
 }
 #[tokio::test]
 async fn test_upload() {
-    let db_pool = create_pool("postgres://postgres:example@localhost/fileshare").await.expect("no connection to db");
+    let settings = get_config().expect("could Not get Config");
+    let db_pool = create_pool(& settings.connection_string_database()).await.expect("no connection to db");
     let token = login().await;
     let client = reqwest::Client::new();
 
