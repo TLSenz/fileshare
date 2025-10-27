@@ -1,6 +1,6 @@
-use std::fmt::Error;
-use sqlx::PgPool;
+use std::error::Error;
 use crate::model::{ConversionError, File, FileToInsert};
+use sqlx::PgPool;
 
 pub async fn write_name_to_db(pool: PgPool, storing_file: FileToInsert) -> Result<File, Error> {
     let result = sqlx::query_as!(
@@ -61,7 +61,10 @@ pub async fn get_file_name_from_db(pool: PgPool, file_name: &str) -> Result<File
     }
 }
 
-pub async fn check_if_file_name_exists(pool: PgPool, name: String) -> Result<bool, ConversionError> {
+pub async fn check_if_file_name_exists(
+    pool: PgPool,
+    name: String,
+) -> Result<bool, ConversionError> {
     let result = sqlx::query!(
         r#"
         SELECT COUNT(*) as count FROM file 
@@ -74,4 +77,16 @@ pub async fn check_if_file_name_exists(pool: PgPool, name: String) -> Result<boo
 
     // If count is 0, the file name doesn't exist
     Ok(result.count.unwrap_or(0) == 0)
+}
+
+pub async fn get_files(pool : PgPool, user_id: i32) -> Result<Vec<File>, Box<dyn Error>> {
+    let files = sqlx::query_as!(
+        File,
+        r#"Select * from file where owner_id = $1
+        "#,
+        user_id
+    ).fetch_all(&pool).await?;
+
+    Ok(files)
+
 }

@@ -1,43 +1,62 @@
 extern crate core;
 
-use reqwest::multipart::{Part, Form};
-use std::fs;
-use std::io::Read;
 use axum::http::header::CONTENT_TYPE;
+use fileshare::configuration::get_config;
 use fileshare::db::create_pool;
 use fileshare::model::{LoginRequest, LoginResponse, SignupRequest};
+use reqwest::multipart::{Form, Part};
 use sqlx::*;
-use fileshare::configuration::get_config;
+use std::fs;
+use std::io::Read;
 
 async fn login() -> String {
     let client = reqwest::Client::new();
-    let signup_data = SignupRequest::new("Test".to_string(), "Test".to_string(), "test@test.email".to_string());
-    client.post("http://127.0.0.1:3000/api/signup").header("Content-Type", "application/json").json(&signup_data).send().await.expect("COuld not OCnne");
+    let signup_data = SignupRequest::new(
+        "Test".to_string(),
+        "Test".to_string(),
+        "test@test.email".to_string(),
+    );
+    client
+        .post("http://127.0.0.1:3000/api/signup")
+        .header("Content-Type", "application/json")
+        .json(&signup_data)
+        .send()
+        .await
+        .expect("COuld not OCnne");
 
-    let credentials = LoginRequest::new("Test".to_string(), "Test".to_string(), "test@test.email".to_string());
+    let credentials = LoginRequest::new(
+        "Test".to_string(),
+        "Test".to_string(),
+        "test@test.email".to_string(),
+    );
     let response = client
         .post("http://127.0.0.1:3000/api/login")
-        .header(CONTENT_TYPE,"application/json")
+        .header(CONTENT_TYPE, "application/json")
         .json(&credentials)
         .send()
-        .await.expect("Could not Connect to Backend. PLease ensure a Instance is running");
-    println!("{:?}",response);
+        .await
+        .expect("Could not Connect to Backend. PLease ensure a Instance is running");
+    println!("{:?}", response);
     assert!(response.status().is_success());
 
     let response_json = response.json::<LoginResponse>().await.unwrap();
     response_json.token
-
 }
 #[tokio::test]
 async fn test_upload() {
     let settings = get_config().expect("could Not get Config");
-    let db_pool = create_pool(& settings.connection_string_database()).await.expect("no connection to db");
+    let db_pool = create_pool(&settings.connection_string_database())
+        .await
+        .expect("no connection to db");
     let token = login().await;
     let client = reqwest::Client::new();
 
     let file = fs::read("test_upload_files/hello.md").expect("Could not read file");
-    let file_multipart = Part::bytes(file).file_name("hello.md").mime_str("text/markdown").expect("Could not create multipart");
-    let multipart = Form::new().part("test_file12345",file_multipart);
+    let file_multipart = Part::bytes(file)
+        .file_name("hello.md")
+        .mime_str("text/markdown")
+        .expect("Could not create multipart");
+    let multipart = Form::new().part("test_file12345", file_multipart);
 
     let response = client
         .post("http://127.0.0.1:3000/api/upload")
@@ -47,7 +66,7 @@ async fn test_upload() {
         .await
         .expect("Could not Connect to Backend. PLease ensure a Instance is running");
 
-    println!("{:?}",response);
+    println!("{:?}", response);
 
     assert!(response.status().is_success());
 
@@ -63,9 +82,9 @@ async fn test_upload() {
 
     assert!(response.status().is_success());
     fs::remove_file("content/test_file12345.markdown").expect("Could not delete file");
-    
-    sqlx::query("Delete from file where file_name = 'test_file12345'").fetch_all(&db_pool).await.unwrap();
 
+    sqlx::query("Delete from file where file_name = 'test_file12345'")
+        .fetch_all(&db_pool)
+        .await
+        .unwrap();
 }
-
-

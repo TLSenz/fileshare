@@ -1,16 +1,16 @@
-use std::env::VarError;
-use std::fmt;
-use std::fmt::Formatter;
-use std::num::TryFromIntError;
+use axum::Json;
 use axum::extract::multipart::MultipartError;
 use axum::http::StatusCode;
-use axum::Json;
 use axum::response::{IntoResponse, Response};
 use bcrypt::BcryptError;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use tokio::task::JoinError;
 use sqlx::FromRow;
+use std::env::VarError;
+use std::fmt;
+use std::fmt::Formatter;
+use std::num::TryFromIntError;
+use tokio::task::JoinError;
 
 #[derive(Serialize, Deserialize, Debug, FromRow)]
 pub struct User {
@@ -27,12 +27,12 @@ pub struct SignupRequest {
     pub email: String,
 }
 
-impl SignupRequest{
-    pub fn new (name: String, password: String, email: String) -> Self{
-        SignupRequest{
+impl SignupRequest {
+    pub fn new(name: String, password: String, email: String) -> Self {
+        SignupRequest {
             name,
             password,
-            email
+            email,
         }
     }
 }
@@ -41,22 +41,22 @@ impl SignupRequest{
 pub struct LoginRequest {
     pub name: String,
     pub password: String,
-    pub email: String
+    pub email: String,
 }
 
-impl LoginRequest{
-    pub fn new (name: String, password: String, email: String) -> Self{
-        LoginRequest{
+impl LoginRequest {
+    pub fn new(name: String, password: String, email: String) -> Self {
+        LoginRequest {
             name,
             password,
-            email
+            email,
         }
     }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LoginResponse {
-    pub token: String
+    pub token: String,
 }
 
 impl IntoResponse for LoginResponse {
@@ -100,19 +100,18 @@ pub struct FileToInsert {
 
 #[derive(Debug)]
 pub enum ConversionError {
-    ConversionError(String)
+    ConversionError(String),
 }
 
 impl fmt::Display for ConversionError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            ConversionError::ConversionError(message) => write!(f,"Conversion Error {} ", message)
+            ConversionError::ConversionError(message) => write!(f, "Conversion Error {} ", message),
         }
     }
 }
 
-impl std::error::Error for ConversionError {
-}
+impl std::error::Error for ConversionError {}
 
 impl From<TryFromIntError> for ConversionError {
     fn from(value: TryFromIntError) -> Self {
@@ -128,7 +127,11 @@ impl From<BcryptError> for ConversionError {
 
 impl IntoResponse for ConversionError {
     fn into_response(self) -> Response {
-        (StatusCode::INTERNAL_SERVER_ERROR, format!("Erro with Storing File and Provide Link: {}", self)).into_response()
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Erro with Storing File and Provide Link: {}", self),
+        )
+            .into_response()
     }
 }
 

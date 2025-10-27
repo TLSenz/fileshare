@@ -1,17 +1,17 @@
-use std::fmt::Error;
-use axum::extract::{Path, State};
-use axum::body::*;
-use axum::response::IntoResponse;
-use axum::http::{header, Response, StatusCode};
-use sqlx::PgPool;
-use uuid::Uuid;
 use crate::model::filemodel::GetFileResponse;
 use crate::repository::filerepository::get_file_name_from_db;
+use axum::body::*;
+use axum::extract::{Path, State};
+use axum::http::{Response, StatusCode, header};
+use axum::response::IntoResponse;
+use sqlx::PgPool;
+use std::fmt::Error;
+use uuid::Uuid;
 
 #[tracing::instrument(skip(pool))]
 pub async fn download(
     State(pool): State<PgPool>,
-    Path(file_link): Path<String>
+    Path(file_link): Path<String>,
 ) -> impl IntoResponse {
     let request_id = Uuid::new_v4();
     tracing::info!(
@@ -32,10 +32,14 @@ pub async fn download(
                     let body = Body::from(data);
 
                     Response::builder()
-                        .header(header::CONTENT_TYPE, content_types.first_raw().unwrap_or("application/octet-stream"))
+                        .header(
+                            header::CONTENT_TYPE,
+                            content_types
+                                .first_raw()
+                                .unwrap_or("application/octet-stream"),
+                        )
                         .body(body)
                         .unwrap()
-
                 }
                 Err(e) => {
                     tracing::error!(
@@ -70,7 +74,7 @@ pub async fn get_file_name(pool: PgPool, file_link: &str) -> Result<GetFileRespo
 
     let res: GetFileResponse = GetFileResponse {
         filename: file_names.to_string(),
-        filepath: file_paths.to_string()
+        filepath: file_paths.to_string(),
     };
 
     tracing::debug!(filename = %res.filename, filepath = %res.filepath, "Resolved file metadata");

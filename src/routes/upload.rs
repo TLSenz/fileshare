@@ -1,19 +1,21 @@
-use std::fs::File;
-use std::io::Write;
-use aws_sdk_s3::primitives::ByteStream;
+use crate::model::usermodel::ConversionError::*;
 use crate::model::usermodel::{ConversionError, FileToInsert};
+use crate::repository::filerepository::{check_if_file_name_exists, write_name_to_db};
+use aws_sdk_s3::primitives::ByteStream;
+use axum::Error;
 use axum::extract::{Multipart, State};
+use axum::response::IntoResponse;
 use bcrypt::hash;
 use bytes::Bytes;
 use sqlx::PgPool;
+use std::fs::File;
+use std::io::Write;
 use uuid::Uuid;
-use crate::model::usermodel::ConversionError::*;
-use crate::repository::filerepository::{check_if_file_name_exists, write_name_to_db};
 
 #[tracing::instrument(skip(file, pool), fields(request_id = %Uuid::new_v4()))]
 pub async fn upload_file(
     State(pool): State<PgPool>,
-    mut file: Multipart
+    mut file: Multipart,
 ) -> Result<String, ConversionError> {
     let mut links = String::new();
 
@@ -37,8 +39,11 @@ pub async fn upload_file(
         tracing::info!("matching file type");
         match file_type {
             Some(file_type) => {
-                let filetype_splited: Vec<&str> = file_type.split('/') .collect();
-                content_type = filetype_splited.get(1).unwrap_or(&"octet-stream").to_string();
+                let filetype_splited: Vec<&str> = file_type.split('/').collect();
+                content_type = filetype_splited
+                    .get(1)
+                    .unwrap_or(&"octet-stream")
+                    .to_string();
             }
             None => {
                 content_type = "txt".to_string();
@@ -114,12 +119,13 @@ pub async fn aws(data: &Bytes, data_info: &FileToInsert) -> Result<(), Box<dyn s
 #[tracing::instrument(skip(data))]
 pub async fn write_data(data: &Bytes, filepath: &String) -> Result<(), ConversionError> {
     tracing::info!(path = %filepath, bytes = data.len(), "Writing data to local storage");
-    let mut file = File::create(filepath)
-        .map_err(|_| ConversionError("Error Creating File".to_string()))?;
-    tracing::info!( "Created File");
-    file
-        .write(data)
+    let mut file =
+        File::create(filepath).map_err(|_| ConversionError("Error Creating File".to_string()))?;
+    tracing::info!("Created File");
+    file.write(data)
         .map_err(|_| ConversionError("Error writing Data to File".to_string()))?;
-    tracing::info!( "Wrote to file");
+    tracing::info!("Wrote to file");
     Ok(())
 }
+
+pub async fn get_files(State(pool): State<PgPool>) -> Result<impl IntoResponse, Error> {}
