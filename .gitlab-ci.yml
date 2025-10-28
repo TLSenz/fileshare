@@ -21,7 +21,7 @@
     rules:
       - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     variables:
-      SQL_OFFLINE: true
+      SQLX_OFFLINE: true
     script:
       - rustup component add rustfmt clippy
       # Apply formatting
