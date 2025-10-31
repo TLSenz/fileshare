@@ -2,8 +2,8 @@ use std::error::Error;
 use crate::model::{ConversionError, File, FileToInsert};
 use sqlx::PgPool;
 
-pub async fn write_name_to_db(pool: PgPool, storing_file: FileToInsert) -> Result<File, Error> {
-    let result = sqlx::query_as!(
+pub async fn write_name_to_db(pool: PgPool, storing_file: FileToInsert) -> Result<File, sqlx::Error> {
+    let file = sqlx::query_as!(
         File,
         r#"
         INSERT INTO file (
@@ -24,23 +24,15 @@ pub async fn write_name_to_db(pool: PgPool, storing_file: FileToInsert) -> Resul
         storing_file.is_deleted
     )
     .fetch_one(&pool)
-    .await;
+    .await?;
 
-    match result {
-        Ok(file) => {
-            println!("File inserted: {:?}", file);
-            Ok(file)
-        }
-        Err(err) => {
-            println!("Database Error: {}", err);
-            Err(Error)
-        }
-    }
+    println!("File inserted: {:?}", file);
+    Ok(file)
 }
 
-pub async fn get_file_name_from_db(pool: PgPool, file_name: &str) -> Result<File, Error> {
+pub async fn get_file_name_from_db(pool: PgPool, file_name: &str) -> Result<File, sqlx::Error> {
     println!("{}", file_name);
-    let result = sqlx::query_as!(
+    let file = sqlx::query_as!(
         File,
         r#"
         SELECT * FROM file 
@@ -50,15 +42,9 @@ pub async fn get_file_name_from_db(pool: PgPool, file_name: &str) -> Result<File
         file_name
     )
     .fetch_one(&pool)
-    .await;
+    .await?;
 
-    match result {
-        Ok(file) => Ok(file),
-        Err(err) => {
-            println!("Database Error: {}", err);
-            Err(Error)
-        }
-    }
+    Ok(file)
 }
 
 pub async fn check_if_file_name_exists(

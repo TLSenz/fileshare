@@ -5,7 +5,7 @@ use axum::extract::{Path, State};
 use axum::http::{Response, StatusCode, header};
 use axum::response::IntoResponse;
 use sqlx::PgPool;
-use std::fmt::Error;
+use sqlx::Error;
 use uuid::Uuid;
 
 #[tracing::instrument(skip(pool))]

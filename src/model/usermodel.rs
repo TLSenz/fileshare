@@ -14,7 +14,7 @@ use tokio::task::JoinError;
 
 #[derive(Serialize, Deserialize, Debug, FromRow)]
 pub struct User {
-    pub id: Option<i32>,
+    pub id: i32,
     pub name: String,
     pub password: String,
     pub email: String,
