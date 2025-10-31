@@ -1,3 +1,4 @@
+use aws_sdk_s3::primitives::event_stream::StrBytes;
 use axum::Json;
 use axum::extract::multipart::MultipartError;
 use axum::http::StatusCode;
@@ -13,11 +14,23 @@ use std::num::TryFromIntError;
 use tokio::task::JoinError;
 
 #[derive(Serialize, Deserialize, Debug, FromRow)]
+#[derive(Clone)]
 pub struct User {
     pub id: i32,
     pub name: String,
     pub password: String,
     pub email: String,
+}
+
+impl User {
+    pub fn new(id: i32, name: String, password: String, email: String) -> Self {
+        User {
+            id,
+            name,
+            password,
+            email,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Clone)]

@@ -1,8 +1,11 @@
-use std::error::Error;
 use crate::model::{ConversionError, File, FileToInsert};
 use sqlx::PgPool;
+use std::error::Error;
 
-pub async fn write_name_to_db(pool: PgPool, storing_file: FileToInsert) -> Result<File, sqlx::Error> {
+pub async fn write_name_to_db(
+    pool: PgPool,
+    storing_file: FileToInsert,
+) -> Result<File, sqlx::Error> {
     let file = sqlx::query_as!(
         File,
         r#"
@@ -65,14 +68,29 @@ pub async fn check_if_file_name_exists(
     Ok(result.count.unwrap_or(0) == 0)
 }
 
-pub async fn get_files(pool : PgPool, user_id: i32) -> Result<Vec<File>, Box<dyn Error>> {
+pub async fn get_files(pool: PgPool, user_id: i32) -> Result<Vec<File>, Box<dyn Error>> {
     let files = sqlx::query_as!(
         File,
         r#"Select * from file where owner_id = $1
         "#,
         user_id
-    ).fetch_all(&pool).await?;
+    )
+    .fetch_all(&pool)
+    .await?;
 
     Ok(files)
+}
 
+pub async fn get_id(pg_pool: PgPool, email: &str) -> Result<i32, Box<dyn Error>> {
+    let id = sqlx::query!("Select Distinct id from users where email = $1", email)
+        .fetch_one(&pg_pool)
+        .await?;
+    Ok(id.id)
+}
+
+pub async fn get_passwd(pg_pool: PgPool, email: &str) -> Result<String, Box<dyn Error>> {
+    let id = sqlx::query!("Select Distinct password from users where email = $1", email)
+        .fetch_one(&pg_pool)
+        .await?;
+    Ok(id.password)
 }

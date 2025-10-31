@@ -1,7 +1,8 @@
-use crate::model::RateError;
 use crate::model::securitymodel::AuthError::*;
 use crate::model::securitymodel::{AuthError, EncodeJWT};
 use crate::model::usermodel::ConversionError;
+use crate::model::{RateError, User};
+use crate::repository::{get_id, get_passwd};
 use crate::repository::userrepository::check_if_user_exist;
 use axum::body::Body;
 use axum::extract::{ConnectInfo, Request, State};
@@ -66,7 +67,7 @@ pub fn decode_jwt(jwt_token: String) -> Result<TokenData<EncodeJWT>, ConversionE
 
 pub async fn authenticate(
     State(pool): State<PgPool>,
-    req: Request,
+    mut req: Request,
     next: Next,
 ) -> Result<Response<Body>, AuthError> {
     let auth_header = req.headers().get(http::header::AUTHORIZATION);
@@ -107,7 +108,7 @@ pub async fn authenticate(
 
     let token_data = decode_jwt(token.to_string())?;
 
-    match check_if_user_exist(pool, token_data.claims).await {
+    match check_if_user_exist(pool.clone(), token_data.claims.clone()).await {
         Ok(_) => {} // User exists, continue
         Err(_) => {
             return Err(AuthError(
@@ -116,7 +117,29 @@ pub async fn authenticate(
             ));
         }
     }
+    let user_id = get_id(pool.clone(), token_data.claims.email.as_str())
+        .await
+        .map_err(|_err| AuthError(
+            "User does not exist in Database WTF is going on".to_string(),
+            StatusCode::UNAUTHORIZED,
+        ))?;
+    let user_password = get_passwd(pool, token_data.claims.email.as_str())
+        .await
+        .map_err(|_err| AuthError(
+            "User does not exist in Database WTF is going on".to_string(),
+            StatusCode::UNAUTHORIZED,
+        ))?;
 
+
+
+    let user = User::new(
+        user_id,
+        token_data.claims.username,
+        user_password,
+        token_data.claims.email,
+    );
+
+    req.extensions_mut().insert(user);
     Ok(next.run(req).await)
 }
 

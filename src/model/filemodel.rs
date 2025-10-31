@@ -1,9 +1,9 @@
+use crate::configuration::LogFormat::Json;
+use crate::model::File;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::configuration::LogFormat::Json;
-use crate::model::File;
 
 pub struct GetFileResponse {
     pub(crate) filename: String,
@@ -21,7 +21,6 @@ pub struct FileDTO {
 }
 
 impl From<File> for FileDTO {
-
     fn from(value: File) -> Self {
         FileDTO {
             filename: value.file_name,

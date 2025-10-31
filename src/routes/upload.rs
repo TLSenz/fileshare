@@ -1,19 +1,20 @@
+use crate::model::User;
 use crate::model::usermodel::ConversionError::*;
 use crate::model::usermodel::{ConversionError, FileToInsert};
 use crate::repository::filerepository::{check_if_file_name_exists, write_name_to_db};
+use crate::service::file_service::read_files;
 use aws_sdk_s3::primitives::ByteStream;
-use axum::{Error, Json};
+use axum::Extension;
 use axum::extract::{Multipart, State};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use axum::{Error, Json};
 use bcrypt::hash;
 use bytes::Bytes;
 use sqlx::PgPool;
 use std::fs::File;
 use std::io::Write;
-use axum::http::StatusCode;
 use uuid::Uuid;
-use crate::model::User;
-use crate::service::file_service::read_files;
 
 #[tracing::instrument(skip(file, pool), fields(request_id = %Uuid::new_v4()))]
 pub async fn upload_file(
@@ -131,10 +132,13 @@ pub async fn write_data(data: &Bytes, filepath: &String) -> Result<(), Conversio
     Ok(())
 }
 
-pub async fn get_files(State(pool): State<PgPool>, user: User) -> impl IntoResponse {
+pub async fn get_files(
+    State(pool): State<PgPool>,
+    Extension(user): Extension<User>,
+) -> impl IntoResponse {
     let list_of_files = read_files(user.id, pool).await;
     match list_of_files {
-        Ok(Files) =>  Json(Files).into_response(),
-        Err(e) => return StatusCode::BAD_REQUEST.into_response()
+        Ok(Files) => Json(Files).into_response(),
+        Err(e) => return StatusCode::BAD_REQUEST.into_response(),
     }
 }

@@ -7,7 +7,7 @@ application:
   rate_limit: 100
 database:
   username: "postgres"
-  host: "pgdb"
+  host: "127.0.0.1"
   password: "example"
   name: "fileshare"
   port: 5432

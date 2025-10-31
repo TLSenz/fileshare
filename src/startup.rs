@@ -1,8 +1,8 @@
 use crate::routes::download::download;
-use crate::routes::health_check;
 use crate::routes::login::login;
 use crate::routes::signup::signup;
 use crate::routes::upload::upload_file;
+use crate::routes::{get_files, health_check};
 use crate::security::{authenticate, rate_limit};
 use axum::extract::ConnectInfo;
 use axum::http::HeaderMap;
@@ -22,6 +22,13 @@ pub async fn startup(listener: TcpListener, pg_pool: PgPool) -> Result<(), std::
         .route("/api/login", post(login))
         .route("/api/signup", post(signup))
         .route(
+            "/api/files",
+            get(get_files).layer(middleware::from_fn_with_state(
+                pg_pool.clone(),
+                authenticate,
+            )),
+        )
+        .route(
             "/api/upload",
             post(upload_file).layer(middleware::from_fn_with_state(
                 pg_pool.clone(),
@@ -30,7 +37,6 @@ pub async fn startup(listener: TcpListener, pg_pool: PgPool) -> Result<(), std::
         )
         .route("/api/download/{*file_link}", get(download))
         .layer(middleware::from_fn(rate_limit))
-        .nest_service("/files", ServeDir::new("content"))
         .with_state(pg_pool);
 
     tracing::info!("Server running on http://0.0.0.0:3000");
