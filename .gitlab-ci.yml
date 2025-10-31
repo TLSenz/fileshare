@@ -15,25 +15,6 @@
     script:
       - cargo check
 
-  auto-lint-fix:
-    stage: lint
-    image: rust
-    rules:
-      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    variables:
-      SQLX_OFFLINE: true
-    script:
-      - rustup component add rustfmt clippy
-      # Apply formatting
-      - cargo fmt --all
-      # Apply clippy fixes
-      - cargo clippy --fix --allow-dirty --allow-staged
-      # Commit & push changes back to MR branch
-      - git config user.email "ci@example.com"
-      - git config user.name "CI Bot"
-      - git add .
-      - git commit -m "Apply rustfmt & clippy fixes [ci skip]" || echo "No changes to commit"
-      - git push "https://$CI_JOB_TOKEN@$CI_REPOSITORY_URL" HEAD:$CI_COMMIT_REF_NAME
 
   cargo-audit:
     stage: lint
