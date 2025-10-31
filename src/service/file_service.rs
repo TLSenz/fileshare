@@ -1,8 +1,7 @@
-use crate::model::{File, FileDTO, GetFileResponse, User};
+use crate::model::FileDTO;
 use crate::repository::get_files;
 use sqlx::PgPool;
 use std::error::Error;
-use std::net::Shutdown::Read;
 
 pub async fn read_files(user_id: i32, pool: PgPool) -> Result<Vec<FileDTO>, Box<dyn Error>> {
     let list_of_files = get_files(pool, user_id).await?;
