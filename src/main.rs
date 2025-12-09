@@ -17,6 +17,7 @@ async fn main() -> Result<(),std::io::Error> {
     
     
     let database_url = configuration.connection_string_database();
+    println!("{}", database_url);
     let pg_pool = create_pool(&database_url).await.expect("Could not get connection to database");
     let listener = TcpListener::bind(configuration.connection_string_application()).await?;
     startup(listener,pg_pool).await?;
