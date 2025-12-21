@@ -6,11 +6,10 @@ application:
   ttl: 1
   rate_limit: 100
 database:
-  username: "postgres"
-  host: "pgdb"
-  password: "example"
+  username: "neondb_owner"
+  host: "ep-young-cell-agc57ajt-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+  password: "npg_6lOnJpeNYHt0"
   name: "fileshare"
   port: 5432
-
 
 
