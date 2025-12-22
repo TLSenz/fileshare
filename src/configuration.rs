@@ -14,7 +14,7 @@ pub struct DatabaseSettings{
     pub username: String,
     pub password: String,
     pub name: String,
-    pub port: u16
+    pub port: Option<u16>
 }
 #[derive(Deserialize,Serialize)]
 pub struct ApplicationSettings{
@@ -76,10 +76,18 @@ pub fn build_subscriber(log_format: LogFormat, filter: EnvFilter) {
 impl Settings {
 
     pub fn connection_string_database(&self) -> String {
-        format!(
-            "postgres://{}:{}@{}:{}/{}",
-            self.database.username, self.database.password, self.database.host, self.database.port, self.database.name
-        )
+
+        if self.database.port.is_none(){
+            format!(
+                "postgres://{}:{}@{}",
+                self.database.username, self.database.password, self.database.host)
+        }
+        else {
+            format!(
+                "postgres://{}:{}@{}:{}/{}",
+                self.database.username, self.database.password, self.database.host, self.database.port.unwrap(), self.database.name)
+        }
+
     }
 
     pub  fn connection_string_application(&self) -> String{
