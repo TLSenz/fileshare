@@ -24,3 +24,5 @@ pkgs.mkShell {
   # Ensure the linker can find OpenSSL at build time
   OPENSSL_NO_VENDOR = 1;     # force openssl-sys to use system OpenSSL
 }
+
+nix-shell -p pkg-config openssl.dev openssl.out
