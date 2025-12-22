@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Write;
 use aws_sdk_s3::primitives::ByteStream;
 use crate::model::usermodel::{ConversionError, FileToInsert};
-use axum::extract::{Multipart, State};
+use axum::extract::{Multipart, Query, State};
 use bcrypt::hash;
 use bytes::Bytes;
 use sqlx::PgPool;
@@ -13,7 +13,8 @@ use crate::repository::filerepository::{check_if_file_name_exists, write_name_to
 #[tracing::instrument(skip(file, pool), fields(request_id = %Uuid::new_v4()))]
 pub async fn upload_file(
     State(pool): State<PgPool>,
-    mut file: Multipart
+    mut file: Multipart,
+    Query(params): Query<PaginationParams>,
 ) -> Result<String, ConversionError> {
     let mut links = String::new();
 
