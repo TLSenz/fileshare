@@ -9,11 +9,11 @@ use redis::io::tcp::socket2::SockAddr;
 use sqlx::PgPool;
 use tokio::net::TcpListener;
 use tower_http::services::ServeDir;
-use crate::routes::download::download;
-use crate::routes::health_check;
-use crate::routes::login::login;
-use crate::routes::signup::signup;
-use crate::routes::upload::upload_file;
+use crate::controller::download;
+use crate::controller::health_check;
+use crate::controller::login;
+use crate::controller::signup;
+use crate::controller::upload_file;
 
 pub async fn startup(listener: TcpListener, pg_pool: PgPool) -> Result<(), std::io::Error> { 
     // Create app with database connection pool as state

@@ -9,6 +9,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 use crate::model::usermodel::ConversionError::*;
 use crate::repository::filerepository::{check_if_file_name_exists, write_name_to_db};
+use crate::service::write_data;
 
 #[tracing::instrument(skip(file, pool), fields(request_id = %Uuid::new_v4()))]
 pub async fn upload_file(
@@ -95,31 +96,5 @@ pub async fn create_link(pool: PgPool, file: FileToInsert) -> Result<String, Con
     Ok(other_link)
 }
 
-#[tracing::instrument(skip(data))]
-pub async fn aws(data: &Bytes, data_info: &FileToInsert) -> Result<(), Box<dyn std::error::Error>> {
-    let config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
-    let client = aws_sdk_s3::Client::new(&config);
 
-    client
-        .put_object()
-        .bucket("fileshareapistorage")
-        .key(&data_info.file_name)
-        .body(ByteStream::from(data.to_vec()))
-        .send()
-        .await?;
 
-    Ok(())
-}
-
-#[tracing::instrument(skip(data))]
-pub async fn write_data(data: &Bytes, filepath: &String) -> Result<(), ConversionError> {
-    tracing::info!(path = %filepath, bytes = data.len(), "Writing data to local storage");
-    let mut file = File::create(filepath)
-        .map_err(|_| ConversionError("Error Creating File".to_string()))?;
-    tracing::info!( "Created File");
-    file
-        .write(data)
-        .map_err(|_| ConversionError("Error writing Data to File".to_string()))?;
-    tracing::info!( "Wrote to file");
-    Ok(())
-}
