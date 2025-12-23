@@ -1,9 +1,9 @@
-use aws_config::imds::client::error::FailedToLoadToken;
 use config::ConfigError;
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 use tracing_subscriber::EnvFilter;
 
-#[derive(Deserialize, Serialize, Clone, S)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Settings {
     pub application: ApplicationSettings,
     pub database: DatabaseSettings,
@@ -16,7 +16,7 @@ pub struct DatabaseSettings {
     pub name: String,
     pub port: Option<u16>,
 }
-#[derive(Deserialize, Serialize, Clone, Send, Sync)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct ApplicationSettings {
     pub host: String,
     pub port: u16,
@@ -26,9 +26,17 @@ pub struct ApplicationSettings {
     pub rate_limit: i32,
 }
 
-#[derive(Clone, Send, Sync)]
+pub struct AWSConfiguration {
+    s3_enabled: bool,
+    bucket_name: String,
+    region: String,
+    access_key: String,
+    secret_key: String,
+}
+
+#[derive(Clone)]
 pub struct AppState {
-    pub pg_pool: sqlx::PgPool,
+    pub pg_pool: PgPool,
     pub settings: Settings,
 }
 

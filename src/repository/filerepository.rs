@@ -72,7 +72,7 @@ pub async fn check_if_file_name_exists(
         "#,
         name
     )
-    .fetch_one(&pool)
+    .fetch_one(pool)
     .await?;
 
     // If count is 0, the file name doesn't exist

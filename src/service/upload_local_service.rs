@@ -2,13 +2,13 @@ use crate::controller::create_link;
 use crate::model::ConversionError::ConversionError as OtherConversionError;
 use crate::model::{ConversionError, FileToInsert, UploadOptions};
 use crate::repository::check_if_file_name_exists;
+use crate::service::upload_aws;
 use axum::extract::Multipart;
 use bcrypt::hash;
 use bytes::Bytes;
 use sqlx::PgPool;
 use std::fs::File;
 use std::io::Write;
-use crate::service::upload_aws;
 
 #[tracing::instrument(skip(data))]
 pub async fn write_data(data: &Bytes, filepath: &String) -> Result<(), ConversionError> {
@@ -26,7 +26,7 @@ pub async fn uploadFileData(
     mut file_data: Multipart,
     pg_pool: &PgPool,
     upload_options: UploadOptions,
-) -> Result<(), ()> {
+) -> Result<(), ConversionError> {
     let mut links = String::new();
     while let Some(field) = file_data.next_field().await? {
         let mut content_type = String::new();
@@ -39,7 +39,7 @@ pub async fn uploadFileData(
 
         tracing::info!(original_name = %other_file_name, "Processing multipart field");
 
-        let _exists = check_if_file_name_exists(pg_pool.clone(), other_file_name.clone()).await?;
+        let _exists = check_if_file_name_exists(pg_pool, other_file_name.clone()).await?;
         tracing::info!("got datavbase call");
         let file_type = field.content_type();
 
@@ -84,7 +84,7 @@ pub async fn uploadFileData(
         match upload_options.aws_upload {
             Some(aws) => {
                 if aws {
-                    upload_aws(pg_pool, file_struct, &data).await
+                    //upload_aws(pg_pool, &file_struct, &data).await;
                 }
             }
             None => {
@@ -93,10 +93,9 @@ pub async fn uploadFileData(
             }
         }
         // aws(&data, &file_struct).await?;
-        
 
         tracing::info!(original_name = %other_file_name, %filename, "Stored file, creating download link");
-        let other_link = create_link(pg_pool.clone(), file_struct).await?;
+        let other_link = create_link(pg_pool, file_struct).await?;
         tracing::info!(link = %other_link, "Created download link");
         links = other_link
     }

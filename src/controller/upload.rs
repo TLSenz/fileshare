@@ -12,7 +12,6 @@ use std::fs::File;
 use std::io::Write;
 use uuid::Uuid;
 
-#[tracing::instrument(skip(file, pool), fields(request_id = %Uuid::new_v4()))]
 pub async fn upload_file(
     State(appState): State<AppState>,
     mut file: Multipart,

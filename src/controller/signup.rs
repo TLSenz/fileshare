@@ -9,7 +9,6 @@ use sqlx::PgPool;
 use std::env;
 use uuid::Uuid;
 
-#[tracing::instrument(skip(pool, user), fields(request_id = %Uuid::new_v4(), user_email = %user.email, user_name = %user.name))]
 pub async fn signup(
     State(appState): State<AppState>,
     Json(user): Json<SignupRequest>,

@@ -27,7 +27,10 @@ pub async fn startup(listener: TcpListener, pg_pool: PgPool) -> Result<(), std::
         .route("/api/signup", post(signup))
         .route(
             "/api/upload",
-            post(upload_file).layer(middleware::from_fn_with_state(state.clone(), authenticate)),
+            post(upload_file).layer(middleware::from_fn_with_state(
+                state.pg_pool.clone(),
+                authenticate,
+            )),
         )
         .route("/api/download/{*file_link}", get(download))
         .layer(middleware::from_fn(rate_limit))

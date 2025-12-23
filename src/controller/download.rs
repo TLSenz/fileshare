@@ -9,7 +9,6 @@ use sqlx::PgPool;
 use std::fmt::Error;
 use uuid::Uuid;
 
-#[tracing::instrument(skip(pool))]
 pub async fn download(
     State(appState): State<AppState>,
     Path(file_link): Path<String>,
