@@ -1,10 +1,9 @@
+pub mod configuration;
+pub mod controller;
+pub mod db;
+pub mod mock;
 pub mod model;
 pub mod repository;
-pub mod controller;
 pub mod security;
 pub mod service;
-pub mod db;
 pub mod startup;
-pub mod configuration;
-pub mod mock;
-

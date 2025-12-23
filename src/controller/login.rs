@@ -1,17 +1,17 @@
+use crate::configuration::AppState;
+use crate::model::{LoginRequest, LoginResponse};
+use crate::security::encode_jwt;
+use axum::Json;
 use axum::extract::State;
 use axum::http::{Response, StatusCode};
 use axum::response::IntoResponse;
-use axum::Json;
 use sqlx::PgPool;
 use uuid::Uuid;
-use crate::model::{LoginRequest, LoginResponse};
-use crate::security::encode_jwt;
 
 pub async fn login(
-    State(pool): State<PgPool>,
-    Json(user): Json<LoginRequest>
+    State(appState): State<AppState>,
+    Json(user): Json<LoginRequest>,
 ) -> impl IntoResponse {
-    
     let request_id = Uuid::new_v4();
     tracing::info!(
         %request_id,
@@ -31,31 +31,29 @@ pub async fn login(
         user.name,
         user.email
     )
-    .fetch_optional(&pool)
+    .fetch_optional(&appState.pg_pool)
     .await;
 
     match result {
         Ok(Some(record)) => {
             // Verify plaintext password against stored bcrypt hash
             match bcrypt::verify(&user.password, &record.password) {
-                Ok(true) => {
-                    match encode_jwt(&user.name, &user.email) {
-                        Ok(token) => {
-                            tracing::info!(
-                                %request_id,
-                                "Successfully logged in user"
-                            );
-                            LoginResponse { token }.into_response()
-                        },
-                        Err(_) => {
-                            tracing::error!(
-                                %request_id,
-                                "Error creating JWT token"
-                            );
-                            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-                        }
+                Ok(true) => match encode_jwt(&user.name, &user.email) {
+                    Ok(token) => {
+                        tracing::info!(
+                            %request_id,
+                            "Successfully logged in user"
+                        );
+                        LoginResponse { token }.into_response()
                     }
-                }
+                    Err(_) => {
+                        tracing::error!(
+                            %request_id,
+                            "Error creating JWT token"
+                        );
+                        StatusCode::INTERNAL_SERVER_ERROR.into_response()
+                    }
+                },
                 Ok(false) => {
                     tracing::info!(
                         %request_id,
@@ -87,6 +85,6 @@ pub async fn login(
                 "Database error, failed to log in user",
             );
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        },
+        }
     }
 }

@@ -1,0 +1,11 @@
+1. Implement App State, wich holds the current Configuration, that is getting Importet from the Yaml File
+
+2. Change SQLX Migration to implement AWS Metrics, like File Id, Size, UUid, Content Type, Regio, BucketName, Something like ParentFolder  change Table
+
+3. Adjust the Yaml Configration to have AWS S3 Configuration
+
+4. Implement the S3 Upload Pipeline
+
+5. Write Unit Tests
+
+6. Write Integration Tests

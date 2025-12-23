@@ -1,28 +1,32 @@
+use crate::controller::create_link;
+use crate::model::ConversionError::ConversionError as OtherConversionError;
 use crate::model::{ConversionError, FileToInsert, UploadOptions};
-use std::fs::File;
-use std::io::Write;
+use crate::repository::check_if_file_name_exists;
 use axum::extract::Multipart;
 use bcrypt::hash;
 use bytes::Bytes;
 use sqlx::PgPool;
-use crate::controller::create_link;
-use crate::model::ConversionError::ConversionError as OtherConversionError;
-use crate::repository::check_if_file_name_exists;
+use std::fs::File;
+use std::io::Write;
+use crate::service::upload_aws;
 
 #[tracing::instrument(skip(data))]
 pub async fn write_data(data: &Bytes, filepath: &String) -> Result<(), ConversionError> {
     tracing::info!(path = %filepath, bytes = data.len(), "Writing data to local storage");
     let mut file = File::create(filepath)
         .map_err(|_| OtherConversionError("Error Creating File".to_string()))?;
-    tracing::info!( "Created File");
-    file
-        .write(data)
+    tracing::info!("Created File");
+    file.write(data)
         .map_err(|_| OtherConversionError("Error writing Data to File".to_string()))?;
-    tracing::info!( "Wrote to file");
+    tracing::info!("Wrote to file");
     Ok(())
 }
 
-pub  async fn uploadFileData(mut file_data: Multipart, pg_pool: PgPool, upload_options: UploadOptions) -> Result<(),()>{
+pub async fn uploadFileData(
+    mut file_data: Multipart,
+    pg_pool: &PgPool,
+    upload_options: UploadOptions,
+) -> Result<(), ()> {
     let mut links = String::new();
     while let Some(field) = file_data.next_field().await? {
         let mut content_type = String::new();
@@ -42,8 +46,11 @@ pub  async fn uploadFileData(mut file_data: Multipart, pg_pool: PgPool, upload_o
         tracing::info!("matching file type");
         match file_type {
             Some(file_type) => {
-                let filetype_splited: Vec<&str> = file_type.split('/') .collect();
-                content_type = filetype_splited.get(1).unwrap_or(&"octet-stream").to_string();
+                let filetype_splited: Vec<&str> = file_type.split('/').collect();
+                content_type = filetype_splited
+                    .get(1)
+                    .unwrap_or(&"octet-stream")
+                    .to_string();
             }
             None => {
                 content_type = "txt".to_string();
@@ -62,7 +69,7 @@ pub  async fn uploadFileData(mut file_data: Multipart, pg_pool: PgPool, upload_o
         let name_link_hash = hash(filename.clone(), 4)?;
         let data_hash = hash(data.clone(), 4)?;
         tracing::info!(original_name = %other_file_name, bytes = size, "Calculated hashes");
-        let file_struct: FileToInsert = FileToInsert {
+        let mut file_struct: FileToInsert = FileToInsert {
             file_name: other_file_name.clone(),
             hashed_file_name: name_link_hash.clone(),
             content_hash: data_hash.clone(),
@@ -74,14 +81,19 @@ pub  async fn uploadFileData(mut file_data: Multipart, pg_pool: PgPool, upload_o
             is_deleted: Some(0),
         };
 
-        if  Some(upload_options.aws_upload).is_some() {
-            //upload_aws
-        }
-        else { 
-            //upload_local
+        match upload_options.aws_upload {
+            Some(aws) => {
+                if aws {
+                    upload_aws(pg_pool, file_struct, &data).await
+                }
+            }
+            None => {
+                //Implement Check what the default Upload PLace for a File is, either Local or S*
+                write_data(&data, &filename).await?;
+            }
         }
         // aws(&data, &file_struct).await?;
-        write_data(&data, &filename).await?;
+        
 
         tracing::info!(original_name = %other_file_name, %filename, "Stored file, creating download link");
         let other_link = create_link(pg_pool.clone(), file_struct).await?;

@@ -1,8 +1,8 @@
-use std::fmt::Error;
-use sqlx::PgPool;
 use crate::model::{ConversionError, File, FileToInsert};
+use sqlx::PgPool;
+use std::fmt::Error;
 
-pub async fn write_name_to_db(pool: PgPool, storing_file: FileToInsert) -> Result<File, Error> {
+pub async fn write_name_to_db(pool: &PgPool, storing_file: FileToInsert) -> Result<File, Error> {
     let result = sqlx::query_as!(
         File,
         r#"
@@ -23,7 +23,7 @@ pub async fn write_name_to_db(pool: PgPool, storing_file: FileToInsert) -> Resul
         storing_file.is_public,
         storing_file.is_deleted
     )
-    .fetch_one(&pool)
+    .fetch_one(pool)
     .await;
 
     match result {
@@ -38,7 +38,7 @@ pub async fn write_name_to_db(pool: PgPool, storing_file: FileToInsert) -> Resul
     }
 }
 
-pub async fn get_file_name_from_db(pool: PgPool, file_name: &str) -> Result<File, Error> {
+pub async fn get_file_name_from_db(pool: &PgPool, file_name: &str) -> Result<File, Error> {
     println!("{}", file_name);
     let result = sqlx::query_as!(
         File,
@@ -49,7 +49,7 @@ pub async fn get_file_name_from_db(pool: PgPool, file_name: &str) -> Result<File
         "#,
         file_name
     )
-    .fetch_one(&pool)
+    .fetch_one(pool)
     .await;
 
     match result {
@@ -61,7 +61,10 @@ pub async fn get_file_name_from_db(pool: PgPool, file_name: &str) -> Result<File
     }
 }
 
-pub async fn check_if_file_name_exists(pool: PgPool, name: String) -> Result<bool, ConversionError> {
+pub async fn check_if_file_name_exists(
+    pool: &PgPool,
+    name: String,
+) -> Result<bool, ConversionError> {
     let result = sqlx::query!(
         r#"
         SELECT COUNT(*) as count FROM file 

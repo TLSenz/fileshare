@@ -1,20 +1,21 @@
-use std::fs::File;
-use std::io::Write;
-use aws_sdk_s3::primitives::ByteStream;
+use crate::configuration::AppState;
+use crate::model::usermodel::ConversionError::*;
 use crate::model::usermodel::{ConversionError, FileToInsert};
+use crate::repository::filerepository::{check_if_file_name_exists, write_name_to_db};
+use crate::service::write_data;
+use aws_sdk_s3::primitives::ByteStream;
 use axum::extract::{Multipart, State};
 use bcrypt::hash;
 use bytes::Bytes;
 use sqlx::PgPool;
+use std::fs::File;
+use std::io::Write;
 use uuid::Uuid;
-use crate::model::usermodel::ConversionError::*;
-use crate::repository::filerepository::{check_if_file_name_exists, write_name_to_db};
-use crate::service::write_data;
 
 #[tracing::instrument(skip(file, pool), fields(request_id = %Uuid::new_v4()))]
 pub async fn upload_file(
-    State(pool): State<PgPool>,
-    mut file: Multipart
+    State(appState): State<AppState>,
+    mut file: Multipart,
 ) -> Result<String, ConversionError> {
     let mut links = String::new();
 
@@ -31,15 +32,18 @@ pub async fn upload_file(
 
         tracing::info!(original_name = %other_file_name, "Processing multipart field");
 
-        let _exists = check_if_file_name_exists(pool.clone(), other_file_name.clone()).await?;
+        let _exists = check_if_file_name_exists(&appState.pg_pool, other_file_name.clone()).await?;
         tracing::info!("got datavbase call");
         let file_type = field.content_type();
 
         tracing::info!("matching file type");
         match file_type {
             Some(file_type) => {
-                let filetype_splited: Vec<&str> = file_type.split('/') .collect();
-                content_type = filetype_splited.get(1).unwrap_or(&"octet-stream").to_string();
+                let filetype_splited: Vec<&str> = file_type.split('/').collect();
+                content_type = filetype_splited
+                    .get(1)
+                    .unwrap_or(&"octet-stream")
+                    .to_string();
             }
             None => {
                 content_type = "txt".to_string();
@@ -74,7 +78,7 @@ pub async fn upload_file(
         write_data(&data, &filename).await?;
 
         tracing::info!(original_name = %other_file_name, %filename, "Stored file, creating download link");
-        let other_link = create_link(pool.clone(), file_struct).await?;
+        let other_link = create_link(&appState.pg_pool, file_struct).await?;
         tracing::info!(link = %other_link, "Created download link");
         links = other_link
     }
@@ -82,7 +86,7 @@ pub async fn upload_file(
 }
 
 #[tracing::instrument(skip(pool))]
-pub async fn create_link(pool: PgPool, file: FileToInsert) -> Result<String, ConversionError> {
+pub async fn create_link(pool: &PgPool, file: FileToInsert) -> Result<String, ConversionError> {
     tracing::debug!(?file, "Writing file metadata to DB");
     let file = write_name_to_db(pool, file)
         .await
@@ -95,6 +99,3 @@ pub async fn create_link(pool: PgPool, file: FileToInsert) -> Result<String, Con
     );
     Ok(other_link)
 }
-
-
-
