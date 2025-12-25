@@ -75,6 +75,32 @@ pub fn build_subscriber(log_format: LogFormat, filter: EnvFilter) {
 
 impl Settings {
 
+    /// Build a PostgreSQL connection string from the configured database settings.
+    ///
+    /// When `database.port` is `None`, the returned URI omits both the port and the database name.
+    /// When `database.port` is `Some(p)`, the returned URI includes the port and the database name.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let db = DatabaseSettings {
+    ///     host: "localhost".into(),
+    ///     username: "user".into(),
+    ///     password: "pass".into(),
+    ///     name: "mydb".into(),
+    ///     port: Some(5432),
+    /// };
+    /// let app = ApplicationSettings {
+    ///     host: "127.0.0.1".into(),
+    ///     port: 8080,
+    ///     log_level: LogLevel::Info,
+    ///     log_format: LogFormat::Compact,
+    ///     ttl: 60,
+    ///     rate_limit: 100,
+    /// };
+    /// let settings = Settings { application: app, database: db };
+    /// assert_eq!(settings.connection_string_database(), "postgres://user:pass@localhost:5432/mydb");
+    /// ```
     pub fn connection_string_database(&self) -> String {
 
         if self.database.port.is_none(){
@@ -90,6 +116,35 @@ impl Settings {
 
     }
 
+    /// Builds the application's listening address as `host:port`.
+    ///
+    /// The returned string uses the form `host:port`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::{Settings, ApplicationSettings, DatabaseSettings, LogLevel, LogFormat};
+    ///
+    /// let settings = Settings {
+    ///     application: ApplicationSettings {
+    ///         host: "127.0.0.1".to_string(),
+    ///         port: 8080,
+    ///         log_level: LogLevel::Info,
+    ///         log_format: LogFormat::Compact,
+    ///         ttl: 60,
+    ///         rate_limit: 100,
+    ///     },
+    ///     database: DatabaseSettings {
+    ///         host: "db".to_string(),
+    ///         username: "user".to_string(),
+    ///         password: "pass".to_string(),
+    ///         name: "app_db".to_string(),
+    ///         port: Some(5432),
+    ///     },
+    /// };
+    ///
+    /// assert_eq!(settings.connection_string_application(), "127.0.0.1:8080");
+    /// ```
     pub  fn connection_string_application(&self) -> String{
         format!("{}:{}",self.application.host,self.application.port)
     }
