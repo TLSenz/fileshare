@@ -5,6 +5,10 @@ application:
   log_format: "Compact"
   ttl: 1
   rate_limit: 100
+  aws_settings:
+    region: "eu-central-1"
+    bucket_name: "neon-fileshare"
+    s3_enabled: true
 database:
   username: "neondb_owner"
   host: "ep-young-cell-agc57ajt-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"

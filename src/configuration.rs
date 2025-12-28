@@ -24,14 +24,14 @@ pub struct ApplicationSettings {
     pub log_format: LogFormat,
     pub ttl: i32,
     pub rate_limit: i32,
+    pub aws_settings: AWSConfiguration
 }
 
+#[derive(Deserialize, Serialize, Clone)]
 pub struct AWSConfiguration {
-    s3_enabled: bool,
-    bucket_name: String,
-    region: String,
-    access_key: String,
-    secret_key: String,
+    pub s3_enabled: bool,
+    pub bucket_name: String,
+    pub region: String,
 }
 
 #[derive(Clone)]

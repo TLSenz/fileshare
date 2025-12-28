@@ -9,6 +9,7 @@ use bytes::Bytes;
 use sqlx::PgPool;
 use std::fs::File;
 use std::io::Write;
+use crate::configuration::AppState;
 
 #[tracing::instrument(skip(data))]
 pub async fn write_data(data: &Bytes, filepath: &String) -> Result<(), ConversionError> {
@@ -22,9 +23,9 @@ pub async fn write_data(data: &Bytes, filepath: &String) -> Result<(), Conversio
     Ok(())
 }
 
-pub async fn uploadFileData(
+pub async fn upload_file_data(
     mut file_data: Multipart,
-    pg_pool: &PgPool,
+    app_state: AppState,
     upload_options: UploadOptions,
 ) -> Result<(), ConversionError> {
     let mut links = String::new();
@@ -39,7 +40,7 @@ pub async fn uploadFileData(
 
         tracing::info!(original_name = %other_file_name, "Processing multipart field");
 
-        let _exists = check_if_file_name_exists(pg_pool, other_file_name.clone()).await?;
+        let _exists = check_if_file_name_exists(&app_state.pg_pool, other_file_name.clone()).await?;
         tracing::info!("got datavbase call");
         let file_type = field.content_type();
 
@@ -84,7 +85,7 @@ pub async fn uploadFileData(
         match upload_options.aws_upload {
             Some(aws) => {
                 if aws {
-                    //upload_aws(pg_pool, &file_struct, &data).await;
+                    upload_aws(&app_state, &file_struct, &data).await?;
                 }
             }
             None => {
@@ -95,7 +96,7 @@ pub async fn uploadFileData(
         // aws(&data, &file_struct).await?;
 
         tracing::info!(original_name = %other_file_name, %filename, "Stored file, creating download link");
-        let other_link = create_link(pg_pool, file_struct).await?;
+        let other_link = create_link(&app_state.pg_pool, file_struct).await?;
         tracing::info!(link = %other_link, "Created download link");
         links = other_link
     }

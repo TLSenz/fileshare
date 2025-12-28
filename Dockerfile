@@ -6,7 +6,7 @@ ENV SQLX_OFFLINE=true
 RUN cargo build --release
 
 
-FROM debian:bookworm-slim AS runtime
+FROM rust:latest AS runtime
 WORKDIR /app
 
 RUN apt-get update -y \

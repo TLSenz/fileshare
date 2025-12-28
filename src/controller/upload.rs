@@ -72,8 +72,10 @@ pub async fn upload_file(
             is_public: Some(1),
             is_deleted: Some(0),
         };
-
-        // aws(&data, &file_struct).await?;
+        if appState.settings.application.aws_settings.s3_enabled{
+            aws(&data, &file_struct).await?;
+        }
+        //
         write_data(&data, &filename).await?;
 
         tracing::info!(original_name = %other_file_name, %filename, "Stored file, creating download link");
