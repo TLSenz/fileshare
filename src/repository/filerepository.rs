@@ -2,26 +2,27 @@ use crate::model::{ConversionError, File, FileToInsert};
 use sqlx::PgPool;
 use std::fmt::Error;
 
-pub async fn write_name_to_db(pool: &PgPool, storing_file: FileToInsert) -> Result<File, Error> {
+pub async fn write_file_info_to_db(pool: &PgPool, storing_file: &FileToInsert) -> Result<File, Error> {
     let result = sqlx::query_as!(
         File,
         r#"
         INSERT INTO file (
             file_name, hashed_file_name, content_hash, content_type, 
-            size, storage_path, owner_id, is_public, is_deleted
+            size, storage_path, owner_id, is_public, is_deleted, on_aws
         ) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        RETURNING *
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING id, file_name, hashed_file_name, content_hash, content_type, size, storage_path, owner_id, is_public as "is_public!", is_deleted as "is_deleted!", on_aws as "on_aws!", created_at, updated_at, deleted_at
         "#,
-        storing_file.file_name,
-        storing_file.hashed_file_name,
-        storing_file.content_hash,
-        storing_file.content_type,
-        storing_file.size,
-        storing_file.storage_path,
-        storing_file.owner_id,
+        &storing_file.file_name,
+        &storing_file.hashed_file_name,
+        &storing_file.content_hash,
+        &storing_file.content_type,
+        &storing_file.size,
+        &storing_file.storage_path,
+        &storing_file.owner_id as &Option<i32>,
         storing_file.is_public,
-        storing_file.is_deleted
+        storing_file.is_deleted,
+        storing_file.on_aws
     )
     .fetch_one(pool)
     .await;
@@ -43,7 +44,7 @@ pub async fn get_file_name_from_db(pool: &PgPool, file_name: &str) -> Result<Fil
     let result = sqlx::query_as!(
         File,
         r#"
-        SELECT * FROM file 
+        SELECT id, file_name, hashed_file_name, content_hash, content_type, size, storage_path, owner_id, is_public as "is_public!", is_deleted as "is_deleted!", on_aws as "on_aws!", created_at, updated_at, deleted_at FROM file 
         WHERE hashed_file_name = $1 
         LIMIT 1
         "#,

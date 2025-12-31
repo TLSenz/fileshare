@@ -60,7 +60,7 @@ pub enum RateError<'a> {
 impl From<redis::RedisError> for RateError<'_> {
     fn from(value: RedisError) -> Self {
         match value {
-            redis_error => RateError::RateError(
+            _redis_error => RateError::RateError(
                 "Could not get value from Redis ",
                 StatusCode::INTERNAL_SERVER_ERROR,
             ),

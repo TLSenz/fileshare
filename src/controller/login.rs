@@ -3,9 +3,8 @@ use crate::model::{LoginRequest, LoginResponse};
 use crate::security::encode_jwt;
 use axum::Json;
 use axum::extract::State;
-use axum::http::{Response, StatusCode};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use sqlx::PgPool;
 use uuid::Uuid;
 
 pub async fn login(

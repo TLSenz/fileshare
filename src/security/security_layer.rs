@@ -17,7 +17,6 @@ use sqlx::PgPool;
 use std::env;
 use std::net::{IpAddr, SocketAddr};
 use std::time::{SystemTime, UNIX_EPOCH};
-use tower_http::metrics::in_flight_requests;
 
 pub fn encode_jwt(name: &str, email: &str) -> Result<String, ConversionError> {
     let expiration = SystemTime::now()

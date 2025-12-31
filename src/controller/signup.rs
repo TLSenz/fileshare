@@ -5,8 +5,6 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use regex::Regex;
-use sqlx::PgPool;
-use std::env;
 use uuid::Uuid;
 
 pub async fn signup(

@@ -3,13 +3,12 @@ use crate::model::FileToInsert;
 use aws_config::BehaviorVersion;
 use aws_sdk_s3::primitives::ByteStream;
 use bytes::Bytes;
-use crate::repository::write_name_to_db;
+use crate::service::create_link;
 
 pub async fn upload_aws(app_state: &AppState, file_meta_data: &FileToInsert, data: &Bytes) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-    tracing::info!("Writing File Information to Database");
-    write_name_to_db(&app_state.pg_pool, *file_meta_data).await?;
     tracing::info!("Uploading File to S3");
-    upload_to_s3(data,file_meta_data, app_state.settings.application.aws_settings.bucket_name)?;
+    upload_to_s3(data,file_meta_data, app_state.settings.application.aws_settings.bucket_name.clone()).await?;
+    //create_link(&app_state.pg_pool, file_meta_data).await?;
     tracing::info!("File Uploaded to S3 Sucessfully");
     Ok(())
 
@@ -20,7 +19,7 @@ pub async fn upload_to_s3(
     data: &Bytes,
     data_info: &FileToInsert,
     bucket_name: String,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     let config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
     let client = aws_sdk_s3::Client::new(&config);
 
@@ -35,9 +34,17 @@ pub async fn upload_to_s3(
     Ok(())
 }
 
+pub async fn get_from_s3(bucket_name: String, file_key: String) -> Result<ByteStream, Box<dyn std::error::Error + Send + Sync >> {
+    let config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
+    let client = aws_sdk_s3::Client::new(&config);
+    let file = client.get_object().bucket(bucket_name).key(file_key).send().await?;
+    Ok(file.body)
+    
+}
+
 pub async fn aws_setup(
     bucket_name: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     let config = aws_config::defaults(BehaviorVersion::latest()).load().await;
     let client = aws_sdk_s3::Client::new(&config);
 

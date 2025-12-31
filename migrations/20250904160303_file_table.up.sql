@@ -8,8 +8,9 @@ CREATE TABLE file (
                       size INTEGER NOT NULL,
                       storage_path TEXT NOT NULL,
                       owner_id INTEGER,                   -- SQLite treats INT as INTEGER
-                      is_public INTEGER DEFAULT 0,        -- SQLite uses INTEGER (0 or 1) for BOOLEAN
-                      is_deleted INTEGER DEFAULT 0,       -- SQLite uses INTEGER (0 or 1) for BOOLEAN
+                      is_public boolean DEFAULT false,        -- SQLite uses INTEGER (0 or 1) for BOOLEAN
+                      is_deleted boolean default false,       -- SQLite uses INTEGER (0 or 1) for BOOLEAN
+                      on_aws boolean default false,
                       created_at timestamptz DEFAULT CURRENT_TIMESTAMP,
                       updated_at timestamptz DEFAULT CURRENT_TIMESTAMP, -- ON UPDATE CURRENT_TIMESTAMP needs a trigger in SQLite
                       deleted_at timestamptz NULL,

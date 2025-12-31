@@ -5,16 +5,12 @@ use crate::controller::login;
 use crate::controller::signup;
 use crate::controller::upload_file;
 use crate::security::{authenticate, rate_limit};
-use axum::extract::ConnectInfo;
-use axum::http::HeaderMap;
 use axum::routing::{get, post};
 use axum::serve;
 use axum::{Router, middleware};
-use redis::io::tcp::socket2::SockAddr;
 use sqlx::PgPool;
-use std::net::{IpAddr, SocketAddr};
+use std::net::SocketAddr;
 use tokio::net::TcpListener;
-use tower_http::services::ServeDir;
 use crate::service::aws_setup;
 
 pub async fn startup(listener: TcpListener, pg_pool: PgPool) -> Result<(), std::io::Error> {

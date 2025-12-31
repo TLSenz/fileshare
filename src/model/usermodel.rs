@@ -78,8 +78,9 @@ pub struct File {
     pub size: i32,
     pub storage_path: String,
     pub owner_id: Option<i32>,
-    pub is_public: Option<i32>,
-    pub is_deleted: Option<i32>,
+    pub is_public: bool,
+    pub is_deleted: bool,
+    pub on_aws: bool,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
     pub deleted_at: Option<DateTime<Utc>>,
@@ -93,9 +94,10 @@ pub struct FileToInsert {
     pub content_type: String,
     pub size: i32,
     pub storage_path: String,
+    pub on_aws: bool,
     pub owner_id: Option<i32>,
-    pub is_public: Option<i32>,
-    pub is_deleted: Option<i32>,
+    pub is_public: bool,
+    pub is_deleted: bool,
 }
 
 #[derive(Debug)]
@@ -136,13 +138,13 @@ impl IntoResponse for ConversionError {
 }
 
 impl From<MultipartError> for ConversionError {
-    fn from(err: MultipartError) -> Self {
+    fn from(_err: MultipartError) -> Self {
         ConversionError::ConversionError("Erorr".to_string())
     }
 }
 
 impl From<VarError> for ConversionError {
-    fn from(value: VarError) -> Self {
+    fn from(_value: VarError) -> Self {
         ConversionError::ConversionError("Error Converting stuff".to_string())
     }
 }
@@ -154,8 +156,8 @@ impl From<JoinError> for ConversionError {
     }
 }
 
-impl From<Box<dyn std::error::Error>> for ConversionError {
-    fn from(value: Box<dyn std::error::Error>) -> Self {
+impl From<Box<dyn std::error::Error + Send + Sync>> for ConversionError {
+    fn from(_value: Box<dyn std::error::Error + Send + Sync>) -> Self {
         ConversionError::ConversionError("Error".to_string())
     }
 }
