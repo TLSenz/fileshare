@@ -1,7 +1,7 @@
 use crate::configuration::AppState;
 use crate::model::ConversionError;
 use crate::repository::filerepository::get_file_name_from_db;
-use crate::service::upload_aws_service::get_from_s3;
+use crate::service::aws_service::get_from_s3;
 use bytes::Bytes;
 
 pub async fn get_file_data(

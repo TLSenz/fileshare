@@ -7,16 +7,17 @@ pub async fn write_file_info_to_db(pool: &PgPool, storing_file: &FileToInsert) -
         File,
         r#"
         INSERT INTO file (
-            file_name, hashed_file_name, content_hash, content_type, 
+            file_name, hashed_file_name, content_hash, content_type,delete_token,
             size, storage_path, owner_id, is_public, is_deleted, on_aws
         ) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING id, file_name, hashed_file_name, content_hash, content_type, size, storage_path, owner_id, is_public as "is_public!", is_deleted as "is_deleted!", on_aws as "on_aws!", created_at, updated_at, deleted_at
         "#,
         &storing_file.file_name,
         &storing_file.hashed_file_name,
         &storing_file.content_hash,
         &storing_file.content_type,
+        &storing_file.delete_token,
         &storing_file.size,
         &storing_file.storage_path,
         &storing_file.owner_id as &Option<i32>,
@@ -24,8 +25,8 @@ pub async fn write_file_info_to_db(pool: &PgPool, storing_file: &FileToInsert) -
         storing_file.is_deleted,
         storing_file.on_aws
     )
-    .fetch_one(pool)
-    .await;
+        .fetch_one(pool)
+        .await;
 
     match result {
         Ok(file) => {
@@ -44,14 +45,14 @@ pub async fn get_file_name_from_db(pool: &PgPool, file_name: &str) -> Result<Fil
     let result = sqlx::query_as!(
         File,
         r#"
-        SELECT id, file_name, hashed_file_name, content_hash, content_type, size, storage_path, owner_id, is_public as "is_public!", is_deleted as "is_deleted!", on_aws as "on_aws!", created_at, updated_at, deleted_at FROM file 
+        SELECT id, file_name, hashed_file_name, content_hash, content_type,delete_token, size, storage_path, owner_id, is_public as "is_public!", is_deleted as "is_deleted!", on_aws as "on_aws!", created_at, updated_at, deleted_at FROM file
         WHERE hashed_file_name = $1 
         LIMIT 1
         "#,
         file_name
     )
-    .fetch_one(pool)
-    .await;
+        .fetch_one(pool)
+        .await;
 
     match result {
         Ok(file) => Ok(file),
@@ -62,7 +63,7 @@ pub async fn get_file_name_from_db(pool: &PgPool, file_name: &str) -> Result<Fil
     }
 }
 
-pub async fn check_if_file_name_exists(
+pub async fn check_if_file_name_available(
     pool: &PgPool,
     name: String,
 ) -> Result<bool, ConversionError> {
@@ -73,9 +74,32 @@ pub async fn check_if_file_name_exists(
         "#,
         name
     )
-    .fetch_one(pool)
-    .await?;
+        .fetch_one(pool)
+        .await?;
 
     // If count is 0, the file name doesn't exist
     Ok(result.count.unwrap_or(0) == 0)
+}
+
+
+pub async fn delete_file_from_db(pool: &PgPool, delete_token: &str) -> Result<(), Error> {
+    let mut tx = pool.begin().await?;
+    let result = sqlx::query("DELETE FROM file WHERE delete_token = $1")
+        .bind(delete_token.to_string())
+        .execute(&mut *tx)
+        .await?
+        .rows_affected();
+
+    if result > 1 {
+        &tx.rollback().await?;
+        Err(Error)
+    } else {
+        tx.commit().await?;
+        Ok(())
+    }
+
+}
+
+pub async fn validate_delete_token(pool: &PgPool, delete_token: &str) -> Result<bool, ConversionError> {
+    sql
 }

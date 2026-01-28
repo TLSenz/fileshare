@@ -5,19 +5,22 @@ use crate::controller::login;
 use crate::controller::signup;
 use crate::controller::upload_file;
 use crate::security::{authenticate, rate_limit};
-use axum::routing::{get, post};
+use axum::routing::{delete, get, post};
 use axum::serve;
 use axum::{Router, middleware};
 use sqlx::PgPool;
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
+use crate::controller::upload::delete_file;
 use crate::service::aws_setup;
 
 pub async fn startup(listener: TcpListener, pg_pool: PgPool) -> Result<(), std::io::Error> {
     let configuration = get_config().expect("Failde to start. Could not Read Config");
     let state = AppState::new(pg_pool, configuration.clone());
     if configuration.application.aws_settings.s3_enabled {
-        aws_setup(&configuration.application.aws_settings.bucket_name).await.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, "AWS Error"))?;
+        aws_setup(&configuration.application.aws_settings.bucket_name)
+                      .await
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("AWS Error: {}", e)))?;
     }
 
     // If Application gets to this Point, the File Has already been Read one Time
@@ -33,6 +36,7 @@ pub async fn startup(listener: TcpListener, pg_pool: PgPool) -> Result<(), std::
                 authenticate,
             )),
         )
+        .route("/api/delete/{id}", delete(delete_file))
         .route("/api/download/{*file_link}", get(download))
         .layer(middleware::from_fn(rate_limit))
         .with_state(state.clone());

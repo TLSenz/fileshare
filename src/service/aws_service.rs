@@ -3,12 +3,10 @@ use crate::model::FileToInsert;
 use aws_config::BehaviorVersion;
 use aws_sdk_s3::primitives::ByteStream;
 use bytes::Bytes;
-use crate::service::create_link;
 
 pub async fn upload_aws(app_state: &AppState, file_meta_data: &FileToInsert, data: &Bytes) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     tracing::info!("Uploading File to S3");
     upload_to_s3(data,file_meta_data, app_state.settings.application.aws_settings.bucket_name.clone()).await?;
-    //create_link(&app_state.pg_pool, file_meta_data).await?;
     tracing::info!("File Uploaded to S3 Sucessfully");
     Ok(())
 
@@ -67,4 +65,3 @@ pub async fn aws_setup(
         }
     }
 }
-//pub  async fn get_form_s3() -> Result<(),()>{}

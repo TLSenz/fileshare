@@ -44,10 +44,11 @@ pub async fn login(
                             "Successfully logged in user"
                         );
                         LoginResponse { token }.into_response()
-                    }
-                    Err(_) => {
+                    },
+                    Err(e) => {
                         tracing::error!(
                             %request_id,
+                            %e,
                             "Error creating JWT token"
                         );
                         StatusCode::INTERNAL_SERVER_ERROR.into_response()

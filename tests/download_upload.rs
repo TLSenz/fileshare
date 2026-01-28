@@ -22,7 +22,7 @@ async fn login() -> String {
         .json(&signup_data)
         .send()
         .await
-        .expect("COuld not OCnne");
+        .expect("Could not Connect");
 
     let credentials = LoginRequest::new(
         "Test".to_string(),
@@ -83,7 +83,7 @@ async fn test_upload() {
     assert!(response.status().is_success());
 
     sqlx::query("Delete from file where file_name = 'test_file12345'")
-        .fetch_all(&db_pool)
+        .execute(&db_pool)
         .await
         .unwrap();
 }

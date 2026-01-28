@@ -1,12 +1,14 @@
 use crate::model::ConversionError::{ConversionError as OtherConversionError};
 use crate::model::{ConversionError, FileToInsert, UploadOptions};
-use crate::repository::{check_if_file_name_exists, write_file_info_to_db};
+use crate::repository::{check_if_file_name_available, write_file_info_to_db};
 use crate::service::upload_aws;
 use bcrypt::hash;
 use bytes::Bytes;
 use sqlx::PgPool;
 use std::fs::File;
 use std::io::Write;
+use rand::distributions::Alphanumeric;
+use rand::Rng;
 use crate::configuration::AppState;
 
 #[tracing::instrument(skip(data))]
@@ -39,7 +41,7 @@ pub async fn upload_file_data(
 
         tracing::info!(original_name = %other_file_name, "Processing multipart field");
 
-        let _exists = check_if_file_name_exists(&app_state.pg_pool, other_file_name.clone()).await?;
+        let _exists = check_if_file_name_available(&app_state.pg_pool, other_file_name.clone()).await?;
         tracing::info!("got datavbase call");
         let file_type = field.content_type();
 
@@ -68,12 +70,14 @@ pub async fn upload_file_data(
         tracing::info!(original_name = %other_file_name, bytes = size, "Calculating hashes");
         let name_link_hash = hash(filename.clone(), 4)?;
         let data_hash = hash(data.clone(), 4)?;
+        let delete_token = create_delete_token();
         tracing::info!(original_name = %other_file_name, bytes = size, "Calculated hashes");
         let file_struct: FileToInsert = FileToInsert {
             file_name: other_file_name.clone(),
             hashed_file_name: name_link_hash.clone(),
             content_hash: data_hash.clone(),
             content_type: content_type.clone(),
+            delete_token: delete_token.clone(),
             size,
             storage_path: filename.clone(),
             owner_id: None,
@@ -116,5 +120,29 @@ pub async fn create_link(pool: &PgPool, file: &FileToInsert) -> Result<String, C
         urlencoding::encode(&file.hashed_file_name)
     );
     Ok(other_link)
+}
+
+
+
+pub fn create_delete_token() -> String {
+    rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .map(char::from)
+        .take(22) // 62^22 ≈ 2^130
+        .collect()
+}
+
+pub async fn delete_file(pool: &PgPool, delete_token: &str) -> Result<(), ConversionError> {
+    validate_delete_token(delete_token).await?;
+
+    todo!()
+
+}
+
+
+
+
+pub async fn validate_delete_token(delete_token: &str) -> Result<bool, ConversionError> {
+
 }
 
