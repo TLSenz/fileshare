@@ -20,4 +20,12 @@ pub enum DeleteError {
 pub struct DeleteWorkerRequest {
     pub uuid: Uuid,
     pub delete_token: String,
+    pub bucket_name: String,
+}
+
+impl DeleteWorkerRequest {
+    pub fn new(delete_token: String, bucket_name: String) -> Self {
+        let uuid = Uuid::new_v4();
+        Self {uuid, delete_token, bucket_name}
+    }
 }

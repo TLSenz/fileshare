@@ -1,7 +1,10 @@
 use config::ConfigError;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
+use tokio::sync::mpsc::Sender;
 use tracing_subscriber::EnvFilter;
+use crate::deletion_qeue::init_deletion_qeu;
+use crate::model::DeleteWorkerRequest;
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Settings {
@@ -38,6 +41,7 @@ pub struct AWSConfiguration {
 pub struct AppState {
     pub pg_pool: PgPool,
     pub settings: Settings,
+    pub sender: Sender<DeleteWorkerRequest>,
 }
 
 pub fn get_config() -> Result<Settings, ConfigError> {
@@ -129,6 +133,7 @@ impl LogLevel {
 
 impl AppState {
     pub fn new(pg_pool: sqlx::PgPool, settings: Settings) -> Self {
-        Self { pg_pool, settings }
+        let tx = init_deletion_qeu(&pg_pool);
+        Self { pg_pool, settings, sender: tx }
     }
 }
