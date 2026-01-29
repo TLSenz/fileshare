@@ -24,7 +24,7 @@ pub struct ApplicationSettings {
     pub log_format: LogFormat,
     pub ttl: i32,
     pub rate_limit: i32,
-    pub aws_settings: AWSConfiguration
+    pub aws_settings: AWSConfiguration,
 }
 
 #[derive(Deserialize, Serialize, Clone)]

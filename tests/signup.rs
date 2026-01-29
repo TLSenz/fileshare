@@ -1,7 +1,7 @@
 use axum::http::StatusCode;
 use fileshare::configuration::get_config;
 use fileshare::db::create_pool;
-use fileshare::model::{SignupRequest};
+use fileshare::model::SignupRequest;
 use reqwest::header::CONTENT_TYPE;
 
 #[tokio::test]

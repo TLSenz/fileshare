@@ -1,4 +1,6 @@
+use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 pub struct GetFileResponse {
     pub(crate) filename: String,
@@ -8,4 +10,14 @@ pub struct GetFileResponse {
 #[derive(Serialize, Deserialize)]
 pub struct UploadOptions {
     pub aws_upload: Option<bool>,
+}
+
+pub enum DeleteError {
+    NotFound(StatusCode),
+    DeletionFailed(StatusCode),
+}
+
+pub struct DeleteWorkerRequest {
+    pub uuid: Uuid,
+    pub delete_token: String,
 }

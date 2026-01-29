@@ -44,7 +44,7 @@ pub async fn login(
                             "Successfully logged in user"
                         );
                         LoginResponse { token }.into_response()
-                    },
+                    }
                     Err(e) => {
                         tracing::error!(
                             %request_id,

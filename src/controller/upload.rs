@@ -1,9 +1,11 @@
-use axum::Error;
 use crate::configuration::AppState;
-use crate::model::usermodel::{ConversionError};
-use axum::extract::{Multipart, Path, State};
-use reqwest::StatusCode;
+use crate::model::usermodel::ConversionError;
 use crate::model::usermodel::FileToInsert;
+use axum::Error;
+use axum::extract::{Multipart, Path, State};
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+
 
 pub async fn upload_file(
     State(appState): State<AppState>,
@@ -14,16 +16,24 @@ pub async fn upload_file(
     tracing::info!("Received request to upload file(s)");
 
     while let Some(field) = file.next_field().await? {
-       // logic to handle upload, probably calling a service
-       links = crate::service::upload_file_data(field, appState.clone(), crate::model::UploadOptions { aws_upload: Some(true) }).await?;
+        // logic to handle upload, probably calling a service
+        links = crate::service::upload_file_data(
+            field,
+            appState.clone(),
+            crate::model::UploadOptions {
+                aws_upload: Some(true),
+            },
+        )
+        .await?;
     }
     Ok(links)
 }
 
-
-pub async fn delete_file(Path(delete_token): Path<String>) -> Result<StatusCode, Error>{
-
+pub async fn delete_file(
+    State(appState): State<AppState>,
+    Path(delete_token): Path<String>,
+) -> Result<impl IntoResponse, StatusCode> {
     tracing::info!("Received request to delete file");
 
+    Ok(StatusCode::OK)
 }
-

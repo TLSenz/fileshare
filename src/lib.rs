@@ -7,3 +7,4 @@ pub mod repository;
 pub mod security;
 pub mod service;
 pub mod startup;
+pub mod deletion_qeue;  

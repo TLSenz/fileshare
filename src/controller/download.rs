@@ -29,7 +29,7 @@ pub async fn download(
                         content_type.to_string()
                     } else {
                         format!("application/{}", content_type)
-                    }
+                    },
                 )
                 .body(body)
                 .unwrap()

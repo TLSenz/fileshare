@@ -13,24 +13,31 @@ pub async fn get_file_data(
         .map_err(|_| ConversionError::ConversionError("File not found in database".to_string()))?;
 
     if file.on_aws {
-        let bucket_name = app_state.settings.application.aws_settings.bucket_name.clone();
+        let bucket_name = app_state
+            .settings
+            .application
+            .aws_settings
+            .bucket_name
+            .clone();
         let file_key = file.file_name.clone();
         let stream = get_from_s3(bucket_name, file_key)
             .await
             .map_err(|e| ConversionError::ConversionError(format!("AWS error: {}", e)))?;
-        
+
         let data = stream
             .collect()
             .await
-            .map_err(|e| ConversionError::ConversionError(format!("Error collecting stream: {}", e)))?
+            .map_err(|e| {
+                ConversionError::ConversionError(format!("Error collecting stream: {}", e))
+            })?
             .into_bytes();
-        
+
         Ok((data, file.content_type))
     } else {
-        let data = tokio::fs::read(&file.storage_path)
-            .await
-            .map_err(|e| ConversionError::ConversionError(format!("Error reading local file: {}", e)))?;
-        
+        let data = tokio::fs::read(&file.storage_path).await.map_err(|e| {
+            ConversionError::ConversionError(format!("Error reading local file: {}", e))
+        })?;
+
         Ok((Bytes::from(data), file.content_type))
     }
 }
