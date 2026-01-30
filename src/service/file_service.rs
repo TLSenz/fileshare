@@ -1,18 +1,15 @@
 use crate::configuration::AppState;
 use crate::model::ConversionError::ConversionError as OtherConversionError;
 use crate::model::{ConversionError, DeleteError, DeleteWorkerRequest, FileToInsert, UploadOptions};
-use crate::repository::{check_if_file_name_available, delete_file_from_db, set_file_deleted, validate_delete_token, write_file_info_to_db};
-use crate::service::{delete_from_s3, upload_aws};
+use crate::repository::{check_if_file_name_available, set_file_deleted, validate_delete_token, write_file_info_to_db};
+use crate::service::upload_aws;
 use bcrypt::hash;
 use bytes::Bytes;
-use rand::Rng;
-use rand::distributions::Alphanumeric;
 use sqlx::PgPool;
 use std::fs::File;
 use std::io::Write;
-use std::sync::mpsc::Sender;
 use axum::http::StatusCode;
-use redis::aio::AsyncPushSender;
+use tokio::sync::mpsc::Sender;
 use uuid::Uuid;
 
 #[tracing::instrument(skip(data))]
@@ -126,13 +123,13 @@ pub async fn create_link(pool: &PgPool, file: &FileToInsert) -> Result<String, C
     Ok(other_link)
 }
 
-    pub async fn delete_file_s3(pool: &PgPool, delete_token: &str, bucket_name: &str, file_key: &str, tx: Sender<DeleteWorkerRequest>) -> Result<String, DeleteError> {
+    pub async fn delete_file_service(pool: &PgPool, delete_token: &str, bucket_name: &str,  tx: Sender<DeleteWorkerRequest>) -> Result<String, DeleteError> {
     let does_file_exist = validate_delete_token(pool, delete_token).await;
         match does_file_exist {
             Ok(true) => {
-                set_file_deleted(pool, delete_token).await.map_err(|_| DeleteError::DeletionFailed(StatusCode::NOT_FOUND))?;
-                let request = DeleteWorkerRequest::new(delete_token.to_string(), bucket_name.to_string());
-                tx.send(request).ok();
+                let file_key = set_file_deleted(pool, delete_token).await.map_err(|_| DeleteError::DeletionFailed(StatusCode::NOT_FOUND))?;
+                let request = DeleteWorkerRequest::new(delete_token.to_string(), bucket_name.to_string(), file_key.to_string());
+                tx.send(request).await.ok();
                 Ok(format!("Successfully deleted file {}", file_key))
             },
             Ok(false) => {
@@ -142,8 +139,6 @@ pub async fn create_link(pool: &PgPool, file: &FileToInsert) -> Result<String, C
                 return Err(DeleteError::DeletionFailed(StatusCode::INTERNAL_SERVER_ERROR));
             }
         }
-
-
 }
 
 

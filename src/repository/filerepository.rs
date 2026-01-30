@@ -94,10 +94,14 @@ pub async fn delete_file_from_db(pool: &PgPool, delete_token: &str) -> Result<()
         Ok(())
 }
 
-pub async fn set_file_deleted(pool: &PgPool, delete_token: &str) -> Result<(), sqlx::Error> {
-    sqlx::query!("UPDATE File set is_deleted = true where delete_token = $1", delete_token)
-        .execute(pool)
+pub async fn set_file_deleted(pool: &PgPool, delete_token: &str) -> Result<String, sqlx::Error> {
+    let updated_row = sqlx::query!("UPDATE File set is_deleted = true where delete_token = $1 returning file_name", delete_token)
+        .fetch_one(pool)
         .await?;
+
+    let file_key = updated_row.file_name;
+
+    Ok(file_key)
 }
 
 pub async fn validate_delete_token(

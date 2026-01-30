@@ -15,17 +15,19 @@ pub struct UploadOptions {
 pub enum DeleteError {
     NotFound(StatusCode),
     DeletionFailed(StatusCode),
+    AwsError(StatusCode),
 }
 
 pub struct DeleteWorkerRequest {
     pub uuid: Uuid,
     pub delete_token: String,
+    pub file_key: String,
     pub bucket_name: String,
 }
 
 impl DeleteWorkerRequest {
-    pub fn new(delete_token: String, bucket_name: String) -> Self {
+    pub fn new(delete_token: String, bucket_name: String, file_key: String) -> Self {
         let uuid = Uuid::new_v4();
-        Self {uuid, delete_token, bucket_name}
+        Self {uuid, delete_token, bucket_name, file_key}
     }
 }

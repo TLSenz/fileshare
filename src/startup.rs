@@ -38,7 +38,7 @@ pub async fn startup(listener: TcpListener, pg_pool: PgPool) -> Result<(), std::
                 authenticate,
             )),
         )
-        .route("/api/delete/:id", delete(delete_file))
+        .route("/api/delete/{id}", delete(delete_file))
         .route("/api/download/{*file_link}", get(download))
         .layer(middleware::from_fn(rate_limit))
         .with_state(state.clone());
