@@ -3,15 +3,14 @@ use crate::model::usermodel::ConversionError;
 use axum::extract::{Multipart, Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::routing::delete_service;
-use crate::model::DeleteError;
+use crate::model::{DeleteError, UploadResponse};
 use crate::service::delete_file_service;
 
 pub async fn upload_file(
     State(app_state): State<AppState>,
     mut file: Multipart,
-) -> Result<String, ConversionError> {
-    let mut links = String::new();
+) -> Result<UploadResponse, ConversionError> {
+    let mut links = UploadResponse::new("".to_string(), "".to_string());
 
     tracing::info!("Received request to upload file(s)");
 

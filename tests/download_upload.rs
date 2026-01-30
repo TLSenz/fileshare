@@ -3,11 +3,10 @@ extern crate core;
 use axum::http::header::CONTENT_TYPE;
 use fileshare::configuration::get_config;
 use fileshare::db::create_pool;
-use fileshare::model::{LoginRequest, LoginResponse, SignupRequest};
+use fileshare::model::{LoginRequest, LoginResponse, SignupRequest, UploadResponse};
 use reqwest::multipart::{Form, Part};
-use sqlx::*;
 use std::fs;
-use std::io::Read;
+
 
 async fn login() -> String {
     let client = reqwest::Client::new();
@@ -70,7 +69,7 @@ async fn test_upload() {
 
     assert!(response.status().is_success());
 
-    let link = response.text().await.unwrap();
+    let link = response.json::<UploadResponse>().await.unwrap().link;
 
     println!("{}", link);
 

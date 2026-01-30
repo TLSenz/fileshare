@@ -1,6 +1,6 @@
 use crate::configuration::AppState;
 use crate::model::ConversionError::ConversionError as OtherConversionError;
-use crate::model::{ConversionError, DeleteError, DeleteWorkerRequest, FileToInsert, UploadOptions};
+use crate::model::{ConversionError, DeleteError, DeleteWorkerRequest, FileToInsert, UploadOptions, UploadResponse};
 use crate::repository::{check_if_file_name_available, set_file_deleted, validate_delete_token, write_file_info_to_db};
 use crate::service::upload_aws;
 use bcrypt::hash;
@@ -28,7 +28,7 @@ pub async fn upload_file_data(
     file_data: axum::extract::multipart::Field<'_>,
     app_state: AppState,
     upload_options: UploadOptions,
-) -> Result<String, ConversionError> {
+) -> Result<UploadResponse, ConversionError> {
     let mut links = String::new();
     // while let Some(field) = file_data.next_field().await? {
     let field = file_data;
@@ -104,8 +104,8 @@ pub async fn upload_file_data(
     tracing::info!(original_name = %other_file_name, %filename, "Stored file, creating download link");
     let other_link = create_link(&app_state.pg_pool, &file_struct).await?;
     tracing::info!(link = %other_link, "Created download link");
-    links = other_link;
-    Ok(links)
+    let upload_response = UploadResponse::new(other_link, delete_token);
+    Ok(upload_response)
 }
 
 #[tracing::instrument(skip(pool))]
