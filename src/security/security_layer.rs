@@ -121,10 +121,11 @@ pub async fn authenticate(
 
 // Improve Logging with getting the User Info from the JWT
 pub async fn rate_limit(
+    State(redis_credentials): State<String>,
     request: Request,
     next: Next,
 ) -> Result<Response<Body>, RateError<'static>> {
-    let mut r = match redis::Client::open("redis://127.0.0.1") {
+    let mut r = match redis::Client::open(redis_credentials.as_str()) {
         Ok(client) => match client.get_multiplexed_async_connection().await {
             Ok(conn) => conn,
             Err(_e) => {
@@ -158,6 +159,7 @@ pub async fn rate_limit(
                 StatusCode::TOO_MANY_REQUESTS,
             ));
         }
+        tracing::info!("Client IP Rate Limit: {}", count);
         return Ok(next.run(request).await);
     }
     return Err(RateError::RateError(

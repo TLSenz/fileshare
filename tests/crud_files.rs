@@ -1,6 +1,7 @@
 use std::fs;
 use axum::http::header::CONTENT_TYPE;
 use axum::routing::delete;
+use redis::TypedCommands;
 use reqwest::multipart::{Form, Part};
 use fileshare::configuration::get_config;
 use fileshare::db::create_pool;
@@ -68,9 +69,9 @@ async fn upload_file_delete_test() -> String {
 
     assert!(response.status().is_success());
 
-    let delete_token = response.json::<UploadResponse>().await.unwrap().delete_token;
+    let delete_token:Vec<UploadResponse> = response.json::<Vec<UploadResponse>>().await.unwrap();
 
-    delete_token
+    delete_token[0].delete_token.clone()
 }
 #[tokio::test]
 async fn test_delete_file() {

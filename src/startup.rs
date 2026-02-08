@@ -17,6 +17,7 @@ use tokio::net::TcpListener;
 pub async fn startup(listener: TcpListener, pg_pool: PgPool) -> Result<(), std::io::Error> {
     let configuration = get_config().expect("Failde to start. Could not Read Config");
     let state = AppState::new(pg_pool, configuration.clone());
+    let redis_credentials = get_redis_credentials();
     if configuration.application.aws_settings.s3_enabled {
         aws_setup(&configuration.application.aws_settings.bucket_name)
             .await
@@ -40,7 +41,7 @@ pub async fn startup(listener: TcpListener, pg_pool: PgPool) -> Result<(), std::
         )
         .route("/api/delete/{id}", delete(delete_file))
         .route("/api/download/{*file_link}", get(download))
-        .layer(middleware::from_fn(rate_limit))
+        .layer(middleware::from_fn_with_state(redis_credentials,rate_limit))
         .with_state(state.clone());
 
     tracing::info!(
@@ -54,4 +55,9 @@ pub async fn startup(listener: TcpListener, pg_pool: PgPool) -> Result<(), std::
     );
 
     server.await
+}
+
+fn get_redis_credentials() -> String{
+    let redis_url = std::env::var("REDIS_PUBLIC_URL");
+    redis_url.unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string())
 }
