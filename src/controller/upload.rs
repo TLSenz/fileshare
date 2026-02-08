@@ -2,6 +2,7 @@ use crate::configuration::AppState;
 use crate::model::usermodel::ConversionError;
 use axum::extract::{Multipart, Path, State};
 use axum::http::StatusCode;
+use axum::Json;
 use axum::response::IntoResponse;
 use crate::model::{DeleteError, UploadResponse};
 use crate::service::delete_file_service;
@@ -9,7 +10,7 @@ use crate::service::delete_file_service;
 pub async fn upload_file(
     State(app_state): State<AppState>,
     mut file: Multipart,
-) -> Result<Vec<UploadResponse>, ConversionError> {
+) -> Result<Json<Vec<UploadResponse>>, ConversionError> {
     let mut responses = Vec::<UploadResponse>::new();
 
     tracing::info!("Received request to upload file(s)");
@@ -26,7 +27,7 @@ pub async fn upload_file(
         .await?;
         responses.push(response);
     }
-    Ok(responses)
+    Ok(axum::Json(responses))
 }
 
 pub async fn delete_file(
