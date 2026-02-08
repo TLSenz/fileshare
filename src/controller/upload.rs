@@ -9,14 +9,14 @@ use crate::service::delete_file_service;
 pub async fn upload_file(
     State(app_state): State<AppState>,
     mut file: Multipart,
-) -> Result<UploadResponse, ConversionError> {
-    let mut links = UploadResponse::new("".to_string(), "".to_string());
+) -> Result<Vec<UploadResponse>, ConversionError> {
+    let mut responses = Vec::<UploadResponse>::new();
 
     tracing::info!("Received request to upload file(s)");
 
     while let Some(field) = file.next_field().await? {
         // logic to handle upload, probably calling a service
-        links = crate::service::upload_file_data(
+         let response = crate::service::upload_file_data(
             field,
             app_state.clone(),
             crate::model::UploadOptions {
@@ -24,8 +24,9 @@ pub async fn upload_file(
             },
         )
         .await?;
+        responses.push(response);
     }
-    Ok(links)
+    Ok(responses)
 }
 
 pub async fn delete_file(
