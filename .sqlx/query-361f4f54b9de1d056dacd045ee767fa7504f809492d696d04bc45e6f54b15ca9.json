@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT * FROM file \n        WHERE hashed_file_name = $1 \n        LIMIT 1\n        ",
+  "query": "\n        SELECT id, file_name, hashed_file_name, content_hash, content_type,delete_token, size, storage_path, owner_id, is_public as \"is_public!\", is_deleted as \"is_deleted!\", on_aws as \"on_aws!\", created_at, updated_at, deleted_at FROM file\n        WHERE hashed_file_name = $1 \n        LIMIT 1\n        ",
   "describe": {
     "columns": [
       {
@@ -30,41 +30,51 @@
       },
       {
         "ordinal": 5,
+        "name": "delete_token",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
         "name": "size",
         "type_info": "Int4"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "storage_path",
         "type_info": "Text"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "owner_id",
         "type_info": "Int4"
       },
       {
-        "ordinal": 8,
-        "name": "is_public",
-        "type_info": "Int4"
-      },
-      {
         "ordinal": 9,
-        "name": "is_deleted",
-        "type_info": "Int4"
+        "name": "is_public!",
+        "type_info": "Bool"
       },
       {
         "ordinal": 10,
+        "name": "is_deleted!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 11,
+        "name": "on_aws!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 12,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 11,
+        "ordinal": 13,
         "name": "updated_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 12,
+        "ordinal": 14,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       }
@@ -82,6 +92,8 @@
       false,
       false,
       false,
+      false,
+      true,
       true,
       true,
       true,
@@ -90,5 +102,5 @@
       true
     ]
   },
-  "hash": "9e2c4e55c143aecb898bcc90e213aac3f7b5c5626a0cf25d7dd75d117caec5da"
+  "hash": "361f4f54b9de1d056dacd045ee767fa7504f809492d696d04bc45e6f54b15ca9"
 }

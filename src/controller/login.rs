@@ -8,7 +8,7 @@ use axum::response::IntoResponse;
 use uuid::Uuid;
 
 pub async fn login(
-    State(appState): State<AppState>,
+    State(app_state): State<AppState>,
     Json(user): Json<LoginRequest>,
 ) -> impl IntoResponse {
     let request_id = Uuid::new_v4();
@@ -30,7 +30,7 @@ pub async fn login(
         user.name,
         user.email
     )
-    .fetch_optional(&appState.pg_pool)
+    .fetch_optional(&app_state.pg_pool)
     .await;
 
     match result {
@@ -45,9 +45,10 @@ pub async fn login(
                         );
                         LoginResponse { token }.into_response()
                     }
-                    Err(_) => {
+                    Err(e) => {
                         tracing::error!(
                             %request_id,
+                            %e,
                             "Error creating JWT token"
                         );
                         StatusCode::INTERNAL_SERVER_ERROR.into_response()

@@ -1,9 +1,8 @@
 use axum::http::StatusCode;
 use fileshare::configuration::get_config;
 use fileshare::db::create_pool;
-use fileshare::model::{LoginRequest, SignupRequest};
+use fileshare::model::SignupRequest;
 use reqwest::header::CONTENT_TYPE;
-use std::arch::x86_64::_mm256_clmulepi64_epi128;
 
 #[tokio::test]
 async fn test_health_check() {
@@ -40,7 +39,7 @@ async fn test_sign_up() {
     assert!(request.status().is_success());
 
     sqlx::query("Delete from users where name = 'Sven'")
-        .fetch_all(&db_pool)
+        .execute(&db_pool)
         .await
         .unwrap();
 }

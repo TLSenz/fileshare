@@ -5,6 +5,7 @@ CREATE TABLE file (
                       hashed_file_name TEXT NOT NULL UNIQUE,
                       content_hash TEXT NOT NULL,         -- SQLite treats CHAR(64) as TEXT
                       content_type TEXT NOT NULL,
+                      delete_token TEXT NOT NULL UNIQUE,
                       size INTEGER NOT NULL,
                       storage_path TEXT NOT NULL,
                       owner_id INTEGER,                   -- SQLite treats INT as INTEGER

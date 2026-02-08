@@ -8,7 +8,7 @@ use regex::Regex;
 use uuid::Uuid;
 
 pub async fn signup(
-    State(appState): State<AppState>,
+    State(app_state): State<AppState>,
     Json(user): Json<SignupRequest>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let request_id = Uuid::new_v4();
@@ -17,7 +17,7 @@ pub async fn signup(
     let regex_email_match =
         Regex::new(r"^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,6})$").unwrap();
 
-    if user.name.is_empty() || user.password.is_empty() || !regex_email_match.is_match(&user.email)
+    if user.name.is_empty() || user.password.is_empty() || !regex_email_match.is_match(&user.email.as_str())
     {
         tracing::error!({
             %request_id,
@@ -38,7 +38,7 @@ pub async fn signup(
         user.email,
         hashed_password
     )
-    .execute(&appState.pg_pool)
+    .execute(&app_state.pg_pool)
     .await
     .map_err(|e| {
         tracing::error!(error = %e, "Error signing up user");

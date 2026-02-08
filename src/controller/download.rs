@@ -29,7 +29,7 @@ pub async fn download(
                         content_type.to_string()
                     } else {
                         format!("application/{}", content_type)
-                    }
+                    },
                 )
                 .body(body)
                 .unwrap()
@@ -40,7 +40,7 @@ pub async fn download(
                 error = %e,
                 "Error getting file data"
             );
-            (StatusCode::INTERNAL_SERVER_ERROR, "File not found").into_response()
+            (StatusCode::INTERNAL_SERVER_ERROR, "AWS Stream Error").into_response()
         }
     }
 }

@@ -161,7 +161,7 @@ pub async fn rate_limit(
         return Ok(next.run(request).await);
     }
     return Err(RateError::RateError(
-        "Rate limit exceeded",
+        "IP Adress could not be determind",
         StatusCode::TOO_MANY_REQUESTS,
     ));
 }
