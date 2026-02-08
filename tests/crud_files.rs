@@ -1,12 +1,10 @@
-extern crate core;
-
+use std::fs;
 use axum::http::header::CONTENT_TYPE;
+use axum::routing::delete;
+use reqwest::multipart::{Form, Part};
 use fileshare::configuration::get_config;
 use fileshare::db::create_pool;
 use fileshare::model::{LoginRequest, LoginResponse, SignupRequest, UploadResponse};
-use reqwest::multipart::{Form, Part};
-use std::fs;
-
 
 async fn login() -> String {
     let client = reqwest::Client::new();
@@ -41,8 +39,9 @@ async fn login() -> String {
     let response_json = response.json::<LoginResponse>().await.unwrap();
     response_json.token
 }
-#[tokio::test]
-async fn test_upload() {
+
+
+async fn upload_file_delete_test() -> String {
     let settings = get_config().expect("could Not get Config");
     let db_pool = create_pool(&settings.connection_string_database())
         .await
@@ -52,7 +51,7 @@ async fn test_upload() {
 
     let file = fs::read("test_upload_files/hello.md").expect("Could not read file");
     let file_multipart = Part::bytes(file)
-        .file_name("hello.md")
+        .file_name("test_delete.md")
         .mime_str("text/markdown")
         .expect("Could not create multipart");
     let multipart = Form::new().part("test_file12345", file_multipart);
@@ -69,20 +68,21 @@ async fn test_upload() {
 
     assert!(response.status().is_success());
 
-    let link = response.json::<UploadResponse>().await.unwrap().link;
+    let delete_token = response.json::<UploadResponse>().await.unwrap().delete_token;
 
-    println!("{}", link);
+    delete_token
+}
+#[tokio::test]
+async fn test_delete_file() {
 
+    let jwt_token = login().await;
+    let client = reqwest::Client::new();
+    let delete_token = upload_file_delete_test().await;
     let response = client
-        .get(link)
+        .delete(format!("http://127.0.0.1:3000/api/delete/{}", delete_token))
+        .bearer_auth(jwt_token)
         .send()
         .await
         .expect("Could not Connect to Backend. PLease ensure a Instance is running");
-
     assert!(response.status().is_success());
-
-    sqlx::query("Delete from file where file_name = 'test_file12345'")
-        .execute(&db_pool)
-        .await
-        .unwrap();
 }

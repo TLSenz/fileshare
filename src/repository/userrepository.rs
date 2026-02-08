@@ -1,8 +1,5 @@
-
-use sqlx::PgPool;
 use crate::model::{ConversionError, EncodeJWT, LoginRequest};
-
-
+use sqlx::PgPool;
 
 pub async fn check_if_user_exist(pool: PgPool, user: EncodeJWT) -> Result<bool, ConversionError> {
     let result = sqlx::query!(
@@ -22,11 +19,16 @@ pub async fn check_if_user_exist(pool: PgPool, user: EncodeJWT) -> Result<bool, 
     if count > 0 {
         Ok(true)
     } else {
-        Err(ConversionError::ConversionError("User not found".to_string()))
+        Err(ConversionError::ConversionError(
+            "User not found".to_string(),
+        ))
     }
 }
 
-pub async fn check_if_user_exist_login(pool: PgPool, user: LoginRequest) -> Result<bool, ConversionError> {
+pub async fn check_if_user_exist_login(
+    pool: PgPool,
+    user: LoginRequest,
+) -> Result<bool, ConversionError> {
     let result = sqlx::query!(
         r#"
         SELECT COUNT(*) as count
@@ -45,6 +47,8 @@ pub async fn check_if_user_exist_login(pool: PgPool, user: LoginRequest) -> Resu
     if count > 0 {
         Ok(true)
     } else {
-        Err(ConversionError::ConversionError("Invalid credentials".to_string()))
+        Err(ConversionError::ConversionError(
+            "Invalid credentials".to_string(),
+        ))
     }
 }

@@ -1,31 +1,116 @@
-image: 
-  name: sonarsource/sonar-scanner-cli:11
-  entrypoint: [""]
-
-variables:
-  SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
-  GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
-
-stages:
-  - build-sonar
+  stages:
+    - lint
+    - build
+    - test
+    - publish
 
 
-build-sonar:
-  stage: build-sonar
-  
-  
-  cache:
-    policy: pull-push
-    key: "sonar-cache-$CI_COMMIT_REF_SLUG"
-    paths:
-      - "${SONAR_USER_HOME}/cache"
-      - sonar-scanner/
-      
-  script: 
-  - sonar-scanner -Dsonar.host.url="${SONAR_HOST_URL}"
-  allow_failure: true
-  rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: $CI_COMMIT_BRANCH == 'master'
-    - if: $CI_COMMIT_BRANCH == 'main'
-    - if: $CI_COMMIT_BRANCH == 'develop'
+  cargo-check:
+    stage: lint
+    image: rust
+    rules:
+      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    variables:
+      SQLX_OFFLINE: true
+    script:
+      - cargo check
+
+  auto-lint-fix:
+    stage: lint
+    image: rust
+    rules:
+      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    variables:
+      SQLX_OFFLINE: true
+    script:
+      - rustup component add rustfmt clippy
+      # Apply formatting
+      - cargo fmt --all
+      # Apply clippy fixes
+      - cargo clippy --fix --allow-dirty --allow-staged
+      # Commit & push changes back to MR branch
+      - git config user.email "ci@example.com"
+      - git config user.name "CI Bot"
+      - git add .
+      - git commit -m "Apply rustfmt & clippy fixes [ci skip]" || echo "No changes to commit"
+      - git push "https://$CI_JOB_TOKEN@$CI_REPOSITORY_URL" HEAD:$CI_COMMIT_REF_NAME
+
+  cargo-audit:
+    stage: lint
+    image: rust
+    rules:
+      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    script:
+      - cargo install cargo-audit
+      - cargo audit || true
+
+  build:amd64:
+    stage: build
+    image: rust
+    script:
+      - cargo build --release
+    rules:
+      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    artifacts:
+      paths:
+        - target/release/fileshare
+    variables:
+      SQLX_OFFLINE: true
+
+  tests-integration-test:
+    stage: test
+    image: rust
+    services:
+      - name: postgres:16
+        alias: pgdb
+      - name: redis:8
+        alias: cache
+    variables:
+      POSTGRES_DB: fileshare
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: example
+      DATABASE_URL: postgres://postgres:example@pgdb:5432/fileshare
+    dependencies:
+      - build:amd64
+    rules:
+      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    script:
+      - apt-get update && apt-get install -y postgresql-client
+      - until pg_isready -h pgdb -p 5432 -U "$POSTGRES_USER"; do echo "Waiting for Postgres..."; sleep 1; done
+      - cargo install sqlx-cli --no-default-features --features postgres
+      - sqlx database create
+      - sqlx migrate run
+      - mkdir content
+      - ./target/release/fileshare &
+      - sleep 3
+      - cargo test
+
+
+
+  rustdoc:
+    stage: build
+    image: rust
+    script:
+      - cargo doc
+    artifacts:
+      paths:
+        - target/doc
+    rules:
+      - if: '$CI_COMMIT_BRANCH == "main"'
+
+  docker-build:
+    stage: publish
+    image: docker:20.10.16
+    services:
+      - docker:20.10.16-dind
+    variables:
+      DOCKER_HOST: tcp://docker:2375
+      DOCKER_TLS_CERTDIR: ""  # disable TLS for DinD
+    rules:
+      - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
+
+    before_script:
+      - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    script:
+      - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
+      - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA

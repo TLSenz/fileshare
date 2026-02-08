@@ -1,16 +1,16 @@
-use std::env::VarError;
-use std::fmt;
-use std::fmt::Formatter;
-use std::num::TryFromIntError;
+use axum::Json;
 use axum::extract::multipart::MultipartError;
 use axum::http::StatusCode;
-use axum::Json;
 use axum::response::{IntoResponse, Response};
 use bcrypt::BcryptError;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use tokio::task::JoinError;
 use sqlx::FromRow;
+use std::env::VarError;
+use std::fmt;
+use std::fmt::Formatter;
+use std::num::TryFromIntError;
+use tokio::task::JoinError;
 
 #[derive(Serialize, Deserialize, Debug, FromRow)]
 pub struct User {
@@ -27,12 +27,12 @@ pub struct SignupRequest {
     pub email: String,
 }
 
-impl SignupRequest{
-    pub fn new (name: String, password: String, email: String) -> Self{
-        SignupRequest{
+impl SignupRequest {
+    pub fn new(name: String, password: String, email: String) -> Self {
+        SignupRequest {
             name,
             password,
-            email
+            email,
         }
     }
 }
@@ -41,22 +41,22 @@ impl SignupRequest{
 pub struct LoginRequest {
     pub name: String,
     pub password: String,
-    pub email: String
+    pub email: String,
 }
 
-impl LoginRequest{
-    pub fn new (name: String, password: String, email: String) -> Self{
-        LoginRequest{
+impl LoginRequest {
+    pub fn new(name: String, password: String, email: String) -> Self {
+        LoginRequest {
             name,
             password,
-            email
+            email,
         }
     }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LoginResponse {
-    pub token: String
+    pub token: String,
 }
 
 impl IntoResponse for LoginResponse {
@@ -75,11 +75,13 @@ pub struct File {
     pub hashed_file_name: String,
     pub content_hash: String,
     pub content_type: String,
+    pub delete_token: String,
     pub size: i32,
     pub storage_path: String,
     pub owner_id: Option<i32>,
-    pub is_public: Option<i32>,
-    pub is_deleted: Option<i32>,
+    pub is_public: bool,
+    pub is_deleted: bool,
+    pub on_aws: bool,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
     pub deleted_at: Option<DateTime<Utc>>,
@@ -91,28 +93,29 @@ pub struct FileToInsert {
     pub hashed_file_name: String,
     pub content_hash: String,
     pub content_type: String,
+    pub delete_token: String,
     pub size: i32,
     pub storage_path: String,
+    pub on_aws: bool,
     pub owner_id: Option<i32>,
-    pub is_public: Option<i32>,
-    pub is_deleted: Option<i32>,
+    pub is_public: bool,
+    pub is_deleted: bool,
 }
 
 #[derive(Debug)]
 pub enum ConversionError {
-    ConversionError(String)
+    ConversionError(String),
 }
 
 impl fmt::Display for ConversionError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            ConversionError::ConversionError(message) => write!(f,"Conversion Error {} ", message)
+            ConversionError::ConversionError(message) => write!(f, "Conversion Error {} ", message),
         }
     }
 }
 
-impl std::error::Error for ConversionError {
-}
+impl std::error::Error for ConversionError {}
 
 impl From<TryFromIntError> for ConversionError {
     fn from(value: TryFromIntError) -> Self {
@@ -128,18 +131,22 @@ impl From<BcryptError> for ConversionError {
 
 impl IntoResponse for ConversionError {
     fn into_response(self) -> Response {
-        (StatusCode::INTERNAL_SERVER_ERROR, format!("Erro with Storing File and Provide Link: {}", self)).into_response()
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Erro with Storing File and Provide Link: {}", self),
+        )
+            .into_response()
     }
 }
 
 impl From<MultipartError> for ConversionError {
-    fn from(err: MultipartError) -> Self {
+    fn from(_err: MultipartError) -> Self {
         ConversionError::ConversionError("Erorr".to_string())
     }
 }
 
 impl From<VarError> for ConversionError {
-    fn from(value: VarError) -> Self {
+    fn from(_value: VarError) -> Self {
         ConversionError::ConversionError("Error Converting stuff".to_string())
     }
 }
@@ -151,8 +158,8 @@ impl From<JoinError> for ConversionError {
     }
 }
 
-impl From<Box<dyn std::error::Error>> for ConversionError {
-    fn from(value: Box<dyn std::error::Error>) -> Self {
+impl From<Box<dyn std::error::Error + Send + Sync>> for ConversionError {
+    fn from(_value: Box<dyn std::error::Error + Send + Sync>) -> Self {
         ConversionError::ConversionError("Error".to_string())
     }
 }

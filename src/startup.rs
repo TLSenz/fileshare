@@ -1,34 +1,57 @@
-use std::net::{IpAddr, SocketAddr};
+use crate::configuration::{AppState, get_config};
+use crate::controller::download;
+use crate::controller::health_check;
+use crate::controller::login;
+use crate::controller::signup;
+use crate::controller::upload::delete_file;
+use crate::controller::upload_file;
 use crate::security::{authenticate, rate_limit};
-use axum::{middleware, Router};
-use axum::extract::ConnectInfo;
-use axum::http::HeaderMap;
-use axum::routing::{get, post};
+use crate::service::aws_setup;
+use axum::routing::{delete, get, post};
 use axum::serve;
-use redis::io::tcp::socket2::SockAddr;
+use axum::{Router, middleware};
 use sqlx::PgPool;
+use std::net::SocketAddr;
 use tokio::net::TcpListener;
-use tower_http::services::ServeDir;
-use crate::routes::download::download;
-use crate::routes::health_check;
-use crate::routes::login::login;
-use crate::routes::signup::signup;
-use crate::routes::upload::upload_file;
 
-pub async fn startup(listener: TcpListener, pg_pool: PgPool) -> Result<(), std::io::Error> { 
+pub async fn startup(listener: TcpListener, pg_pool: PgPool) -> Result<(), std::io::Error> {
+    let configuration = get_config().expect("Failde to start. Could not Read Config");
+    let state = AppState::new(pg_pool, configuration.clone());
+    if configuration.application.aws_settings.s3_enabled {
+        aws_setup(&configuration.application.aws_settings.bucket_name)
+            .await
+            .map_err(|e| {
+                std::io::Error::new(std::io::ErrorKind::Other, format!("AWS Error: {}", e))
+            })?;
+    }
+
+    // If Application gets to this Point, the File Has already been Read one Time
     // Create app with database connection pool as state
     let app = Router::new()
         .route("/", get(health_check))
         .route("/api/login", post(login))
         .route("/api/signup", post(signup))
-        .route("/api/upload", post(upload_file).layer(middleware::from_fn_with_state(pg_pool.clone(), authenticate)))
+        .route(
+            "/api/upload",
+            post(upload_file).layer(middleware::from_fn_with_state(
+                state.pg_pool.clone(),
+                authenticate,
+            )),
+        )
+        .route("/api/delete/{id}", delete(delete_file))
         .route("/api/download/{*file_link}", get(download))
         .layer(middleware::from_fn(rate_limit))
-        .nest_service("/files", ServeDir::new("content"))
-        .with_state(pg_pool);
+        .with_state(state.clone());
 
-    tracing::info!("Server running on http://0.0.0.0:3000");
-    let server = serve(listener, app.into_make_service_with_connect_info::<SocketAddr>());
+    tracing::info!(
+        "Service running on http://{}:{}",
+        state.settings.application.host,
+        state.settings.application.port
+    );
+    let server = serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    );
 
     server.await
 }
